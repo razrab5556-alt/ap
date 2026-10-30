@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Inter:wght@400;500;600&family=VT323&display=swap" rel="stylesheet">
-    
+
     <script>
         tailwind.config = {
             theme: {
@@ -35,7 +35,7 @@
             }
         }
     </script>
-    
+
     <style>
         body {
             background-color: #0e0f12;
@@ -142,7 +142,7 @@
                 <h1 class="text-2xl font-black heading-font tracking-wide uppercase flex items-center justify-center gap-1.5">
                     Приветствую, <span id="user-name" class="text-white">Игрок</span>!
                 </h1>
-                <p class="text-subText text-xs mt-1">Добро пожаловать в JuiceGrief</p>
+                <p class="text-subText text-xs mt-1">Добро пожаловать на JuiceGrief!</p>
             </div>
 
             <div class="w-full flex items-center justify-center my-2">
@@ -357,6 +357,13 @@
             isVerified: false
         };
 
+        // Проверка start_param от бота (после проверки подписки)
+        // Бот присылает inline-кнопку с ?startapp=subscribed
+        const startParam = tg?.initDataUnsafe?.start_param || '';
+        if (startParam === 'subscribed') {
+            state.isVerified = true;
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('user-name').innerText = state.userName;
             document.getElementById('tg-id-display').innerText = state.tgId || 'Недоступен';
@@ -377,6 +384,11 @@
 
             if (state.tgId) {
                 document.getElementById('ref-link').value = `https://t.me/${BOT_USERNAME}?start=${state.tgId}`;
+            }
+
+            // Если бот подтвердил подписку — сразу показываем тост
+            if (state.isVerified) {
+                showToast('Подписка подтверждена!', 'success');
             }
 
             checkCooldowns();
@@ -451,15 +463,23 @@
             }
 
             state.currentRewardType = type;
-            state.isVerified = false;
             
             document.getElementById('modal-title').innerText = type === 'pegas' ? 'Получение Доната PEGAS' : 'Получение ежедневного бонуса';
-            
-            const iconBox = document.getElementById('sub-status-icon');
-            iconBox.className = 'w-7 h-7 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-500 font-bold text-xs';
-            iconBox.innerHTML = '<i class="fa-solid fa-xmark"></i>';
 
-            document.getElementById('modal-action-btn').innerText = 'Проверить подписку';
+            const iconBox = document.getElementById('sub-status-icon');
+            const btn = document.getElementById('modal-action-btn');
+
+            if (state.isVerified) {
+                // Подписка уже подтверждена ботом (start_param=subscribed)
+                iconBox.className = 'w-7 h-7 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-xs';
+                iconBox.innerHTML = '<i class="fa-solid fa-check"></i>';
+                btn.innerText = 'ПОЛУЧИТЬ БОНУС';
+            } else {
+                iconBox.className = 'w-7 h-7 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-500 font-bold text-xs';
+                iconBox.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+                btn.innerText = 'Проверить подписку';
+            }
+
             document.getElementById('tasks-modal').classList.remove('hidden');
         }
 
@@ -470,51 +490,58 @@
             else window.open(CHANNEL_URL, '_blank', 'noopener,noreferrer');
         }
 
-        // Пошаговая логика отправки наград через tg.sendData()
+        // Реальная логика: проверка подписки через бота, затем выдача награды
         function handleModalAction() {
             const btn = document.getElementById('modal-action-btn');
-            const iconBox = document.getElementById('sub-status-icon');
 
             if (!state.isVerified) {
+                // Шаг 1: просим сервер проверить подписку.
+                // sendData закроет MiniApp, бот ответит в чат inline-кнопкой
+                // "Открыть приложение" с ?startapp=subscribed (если подписан)
                 btn.innerText = 'ПРОВЕРЯЕМ...';
-                
-                // Имитируем быструю проверку и переключаем на получение бонуса
-                setTimeout(() => {
-                    state.isVerified = true;
-                    iconBox.className = 'w-7 h-7 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-xs';
-                    iconBox.innerHTML = '<i class="fa-solid fa-check"></i>';
-                    
-                    btn.innerText = 'ПОЛУЧИТЬ БОНУС';
-                    showToast('Подписка подтверждена!', 'success');
-                }, 600);
-
-            } else {
-                // Отправляем JSON-пакет в телеграм-бот через sendData()
                 const payload = {
-                    action: 'claim_reward',
-                    type: state.currentRewardType,
-                    nickname: state.nickname
+                    action: 'check_subscription',
+                    nickname: state.nickname,
+                    type: state.currentRewardType
                 };
-
-                if (tg?.sendData) {
+                try {
+                    if (!tg?.sendData) throw new Error('sendData недоступен. Откройте MiniApp через кнопку web_app.');
                     tg.sendData(JSON.stringify(payload));
-                } else {
-                    showToast('Откройте приложение внутри Telegram!', 'error');
-                    return;
+                } catch (err) {
+                    console.error('sendData error:', err);
+                    btn.innerText = 'Проверить подписку';
+                    showToast(err.message, 'error');
                 }
-
-                // Запоминаем выдачу в локальном хранилище
-                if (state.currentRewardType === 'daily') {
-                    localStorage.setItem('juicegrief_daily_cd', Date.now().toString());
-                    startDailyTimer();
-                } else if (state.currentRewardType === 'pegas') {
-                    localStorage.setItem('juicegrief_pegas_claimed', 'true');
-                    document.getElementById('pegas-status-label').classList.remove('hidden');
-                }
-
-                closeTasksModal();
-                showToast('Награда успешно запрошена!', 'success');
+                return;
             }
+
+            // Шаг 2: подписка уже подтверждена (start_param=subscribed) — выдаём награду
+            const payload = {
+                action: 'claim_reward',
+                type: state.currentRewardType,
+                nickname: state.nickname
+            };
+
+            try {
+                if (!tg?.sendData) throw new Error('sendData недоступен. Откройте MiniApp через кнопку web_app.');
+                tg.sendData(JSON.stringify(payload));
+            } catch (err) {
+                console.error('sendData error:', err);
+                showToast(err.message, 'error');
+                return;
+            }
+
+            // Запоминаем выдачу в локальном хранилище (сервер — источник правды)
+            if (state.currentRewardType === 'daily') {
+                localStorage.setItem('juicegrief_daily_cd', Date.now().toString());
+                startDailyTimer();
+            } else if (state.currentRewardType === 'pegas') {
+                localStorage.setItem('juicegrief_pegas_claimed', 'true');
+                document.getElementById('pegas-status-label').classList.remove('hidden');
+            }
+
+            closeTasksModal();
+            showToast('Награда успешно запрошена!', 'success');
         }
 
         function startDailyTimer() {
