@@ -196,10 +196,9 @@
         <!-- ==================== TAB 1: MAIN / HOME ==================== -->
         <div id="tab-home" class="space-y-6">
             
-            <!-- User Header Banner (With Telegram Photo & Real Name) -->
+            <!-- User Header Banner -->
             <div class="flex flex-col items-center justify-center pt-4 pb-2 text-center">
                 <div class="relative mb-3">
-                    <!-- Real TG Photo or Avatar Initial Fallback -->
                     <div id="avatar-container" class="w-20 h-20 rounded-full bg-gradient-to-tr from-orange-500 to-amber-400 flex items-center justify-center text-white text-3xl font-bold tg-avatar-frame border-2 border-orange-500 overflow-hidden relative">
                         <img id="user-photo" class="w-full h-full object-cover hidden" alt="Avatar" onerror="this.classList.add('hidden'); document.getElementById('avatar-initial').classList.remove('hidden');">
                         <span id="avatar-initial">T</span>
@@ -234,13 +233,12 @@
                             Нажми чтобы получить свой ежедневный бонус!
                         </p>
                     </div>
-                    <!-- Pixel Cake Illustration -->
                     <div class="absolute -right-2 -bottom-2 w-28 h-28 opacity-40 group-hover:opacity-70 transition-opacity flex items-center justify-center pointer-events-none">
                         <i class="fa-solid fa-cake-candles text-7xl text-orange-400/30 transform -rotate-12"></i>
                     </div>
                 </div>
 
-                <!-- PEGAS DONATE CARD (Replaces Wipe Bonus) -->
+                <!-- PEGAS DONATE CARD -->
                 <div onclick="openTasksModal('pegas')" class="card-gradient rounded-2xl p-5 relative overflow-hidden cursor-pointer hover:border-orange-500/50 transition-all duration-300 group">
                     <div class="w-1/2 z-10 relative">
                         <h2 class="text-lg font-black heading-font text-white uppercase tracking-wide flex items-center gap-2">
@@ -252,7 +250,6 @@
                         </p>
                     </div>
 
-                    <!-- MINECRAFT PEGAS BADGE ICON (As per image request) -->
                     <div class="absolute right-3 top-1/2 -translate-y-1/2 z-10 scale-90 sm:scale-100 pointer-events-none">
                         <div class="pixel-mc-badge">
                             <div class="pixel-icon-box">
@@ -281,7 +278,6 @@
                     <h2 class="text-base font-black heading-font uppercase text-white tracking-wider">Ваш аккаунт</h2>
                 </div>
 
-                <!-- Telegram identity -->
                 <div class="bg-inputBg rounded-xl p-3 flex justify-between items-center gap-3">
                     <span class="profile-label">Telegram ID</span>
                     <div class="flex items-center gap-3">
@@ -290,13 +286,11 @@
                     </div>
                 </div>
 
-                <!-- Nickname Status -->
                 <div class="bg-inputBg rounded-xl p-3 flex justify-between items-center">
                     <span class="text-xs font-bold text-subText uppercase tracking-wider">Игровой ник</span>
                     <span id="nick-status" class="text-xs font-black uppercase text-red-500 tracking-wider">Не привязан</span>
                 </div>
 
-                <!-- Notice -->
                 <div class="text-center px-2">
                     <p class="text-[11px] text-subText leading-tight">
                         <i class="fa-solid fa-triangle-exclamation text-accentOrange mr-1"></i>
@@ -305,7 +299,6 @@
                     </p>
                 </div>
 
-                <!-- Nickname Input -->
                 <div id="nick-input-container" class="space-y-3">
                     <input type="text" id="mc-nickname" placeholder="Введи свой ник в игре" 
                            class="w-full bg-inputBg border border-neutral-700/60 rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-accentOrange transition-colors">
@@ -333,7 +326,6 @@
                     <span id="ref-earned" class="text-sm font-black text-white">0</span>
                 </div>
 
-                <!-- Referral Link Input & Copy -->
                 <div class="relative flex items-center mt-2">
                     <input type="text" id="ref-link" readonly value="https://t.me/JuiceGriefTG?start=123456789" 
                            class="w-full bg-inputBg border border-neutral-700/60 rounded-xl pl-4 pr-12 py-3 text-xs text-neutral-400 font-mono truncate focus:outline-none">
@@ -384,13 +376,12 @@
         </div>
     </nav>
 
-    <!-- ==================== TASKS MODAL (JuiceGriefTG Check ONLY) ==================== -->
+    <!-- ==================== TASKS MODAL ==================== -->
     <div id="tasks-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden transition-opacity duration-300">
         <div class="bg-[#14151a] border border-neutral-800 w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 space-y-5 transform transition-transform duration-300 relative">
             
             <div class="w-12 h-1 bg-neutral-700 rounded-full mx-auto -mt-2 mb-2"></div>
 
-            <!-- Modal Header -->
             <div class="space-y-1">
                 <div class="flex items-center gap-3">
                     <div class="w-9 h-9 rounded-full bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-accentOrange">
@@ -405,7 +396,6 @@
                 </p>
             </div>
 
-            <!-- Single Channel Sub Task: @JuiceGriefTG -->
             <div class="space-y-3">
                 <div class="bg-inputBg border border-neutral-800 rounded-xl p-4 flex justify-between items-center">
                     <div class="flex items-center gap-3">
@@ -417,13 +407,13 @@
                             <a href="https://t.me/JuiceGriefTG" target="_blank" rel="noopener noreferrer" onclick="openChannelLink(); return false;" class="text-xs text-cyan-400 font-mono hover:underline">@JuiceGriefTG</a>
                         </div>
                     </div>
-                    <span id="ch-sub-status" class="text-xs text-neutral-400">Не проверено</span>
+                    <span id="ch-sub-status" class="text-xs text-neutral-400">Требуется подписка</span>
                 </div>
             </div>
 
-            <!-- Action Button -->
+            <!-- Action Button (Now uses WebApp Data sendData) -->
             <button onclick="verifyAndClaim()" class="w-full orange-btn py-4 rounded-xl font-black heading-font text-white uppercase text-sm tracking-wider">
-                Проверить подписку
+                Получить бонус
             </button>
             
             <button onclick="closeTasksModal()" class="w-full text-center text-xs text-subText hover:text-white py-1">
@@ -443,8 +433,6 @@
         const tg = window.Telegram?.WebApp;
         if (tg) { tg.ready(); tg.expand(); }
 
-        // Укажите публичный HTTPS-адрес backend-сервера из server.js
-        const API_BASE_URL = window.JUICEGRIEF_API_URL || window.location.origin;
         const BOT_USERNAME = 'JuiceGriefTG';
         const CHANNEL_URL = 'https://t.me/JuiceGriefTG';
 
@@ -454,36 +442,10 @@
             userName: telegramUser ? ([telegramUser.first_name, telegramUser.last_name].filter(Boolean).join(' ').trim() || 'Игрок') : 'Откройте через Telegram',
             photoUrl: telegramUser?.photo_url || null,
             nickname: '',
-            claimedPegas: false,
-            lastDailyClaim: 0,
-            currentRewardType: 'daily',
-            subscriptionVerified: false,
-            profileLoaded: false
+            currentRewardType: 'daily'
         };
 
-        function apiUrl(path) {
-            if (!API_BASE_URL || API_BASE_URL.includes('YOUR-DOMAIN')) {
-                throw new Error('Сначала укажите адрес backend-сервера в JUICEGRIEF_API_URL.');
-            }
-            return API_BASE_URL.replace(/\/$/, '') + path;
-        }
-
-        async function apiRequest(path, options = {}) {
-            if (!tg?.initData) throw new Error('Откройте Mini App через Telegram.');
-            const response = await fetch(apiUrl(path), {
-                ...options,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Telegram-Init-Data': tg.initData,
-                    ...(options.headers || {})
-                }
-            });
-            const data = await response.json().catch(() => ({}));
-            if (!response.ok || data.ok === false) throw new Error(data.error || 'Ошибка сервера. Попробуйте позже.');
-            return data;
-        }
-
-        document.addEventListener('DOMContentLoaded', async () => {
+        document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('user-name').innerText = state.userName;
             document.getElementById('tg-id-display').innerText = state.tgId || 'Недоступен';
 
@@ -498,23 +460,11 @@
                 initial.innerText = state.userName.charAt(0).toUpperCase() || 'J';
             }
 
-            // Локально храним только отображаемый игровой ник; реферальные данные и награды — на сервере.
             state.nickname = localStorage.getItem('juicegrief_mc_nickname') || '';
             if (state.nickname) renderLinkedState();
 
-            if (!telegramUser || !tg?.initData) {
-                showToast('Откройте Mini App через Telegram.', 'error');
-                return;
-            }
-
-            try {
-                const profile = await apiRequest('/api/me');
-                state.profileLoaded = true;
-                document.getElementById('ref-link').value = profile.referralLink;
-                document.getElementById('ref-count').innerText = String(profile.referralsCount ?? 0);
-                document.getElementById('ref-earned').innerText = String(profile.referralPoints ?? 0);
-            } catch (error) {
-                showToast(error.message, 'error');
+            if (state.tgId) {
+                document.getElementById('ref-link').value = `https://t.me/${BOT_USERNAME}?start=${state.tgId}`;
             }
         });
 
@@ -541,15 +491,15 @@
             }
         }
 
-        async function linkAccount() {
+        function linkAccount() {
             if (!state.tgId) return showToast('Откройте приложение через Telegram.', 'error');
             const nick = document.getElementById('mc-nickname').value.trim();
-            if (!/^[a-zA-Z0-9_]{3,16}$/.test(nick)) return showToast('Ник должен содержать 3–16 символов: латиница, цифры или _.', 'error');
-            // До появления отдельного API для игрового ника сохраняем его локально.
+            if (!/^[a-zA-Z0-9_]{3,16}$/.test(nick)) return showToast('Ник должен содержать 3–16 символов (латиница, цифры, _).', 'error');
+            
             state.nickname = nick;
             localStorage.setItem('juicegrief_mc_nickname', nick);
             renderLinkedState();
-            showToast('Игровой ник сохранён.', 'success');
+            showToast('Игровой ник успешно сохранён!', 'success');
         }
 
         function renderLinkedState() {
@@ -571,9 +521,8 @@
             if (!state.nickname) { showToast('Сначала привяжите ник в профиле!', 'error'); switchTab('profile'); return; }
             state.currentRewardType = type;
             document.getElementById('modal-title').innerText = type === 'pegas'
-                ? 'Подпишись для получения Доната PEGAS'
-                : 'Подпишись для получения ежедневного бонуса';
-            document.getElementById('ch-sub-status').innerText = 'Не проверено';
+                ? 'Получение Доната PEGAS'
+                : 'Получение ежедневного бонуса';
             document.getElementById('tasks-modal').classList.remove('hidden');
         }
 
@@ -584,45 +533,34 @@
             else window.open(CHANNEL_URL, '_blank', 'noopener,noreferrer');
         }
 
-        async function verifyAndClaim() {
-            const button = document.querySelector('#tasks-modal button[onclick="verifyAndClaim()"]');
-            const status = document.getElementById('ch-sub-status');
-            button.disabled = true;
-            button.classList.add('opacity-60');
-            button.innerText = 'ПРОВЕРЯЕМ...';
-            try {
-                const check = await apiRequest('/api/check-subscription', { method: 'POST', body: JSON.stringify({}) });
-                if (!check.subscribed) {
-                    status.innerText = 'Не подписан';
-                    showToast('Подписка на @JuiceGriefTG не найдена. Подпишитесь и проверьте снова.', 'error');
-                    return;
-                }
-                status.innerText = 'Подписка подтверждена';
-                state.subscriptionVerified = true;
-                const result = await apiRequest('/api/claim', {
-                    method: 'POST',
-                    body: JSON.stringify({ type: state.currentRewardType, minecraftNick: state.nickname })
-                });
-                if (state.currentRewardType === 'pegas') state.claimedPegas = true;
-                closeTasksModal();
-                showToast(result.message || 'Подписка подтверждена, заявка зарегистрирована.', 'success');
-            } catch (error) {
-                showToast(error.message, 'error');
-            } finally {
-                button.disabled = false;
-                button.classList.remove('opacity-60');
-                button.innerText = 'Проверить подписку';
+        // Передача данных в плагин через tg.sendData()
+        function verifyAndClaim() {
+            if (!state.nickname) {
+                showToast('Сначала привяжите ник в профиле!', 'error');
+                return;
+            }
+
+            const payload = {
+                action: 'claim_reward',
+                type: state.currentRewardType,
+                nickname: state.nickname
+            };
+
+            if (tg?.sendData) {
+                tg.sendData(JSON.stringify(payload));
+                tg.close();
+            } else {
+                showToast('Откройте приложение внутри Telegram!', 'error');
             }
         }
 
         async function copyRefLink() {
             const value = document.getElementById('ref-link').value;
-            if (!value || value.startsWith('Откройте')) return showToast('Реферальная ссылка пока недоступна.', 'error');
+            if (!value) return showToast('Ссылка недоступна.', 'error');
             try {
                 if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(value);
-                else { const field = document.getElementById('ref-link'); field.select(); document.execCommand('copy'); }
                 showToast('Реферальная ссылка скопирована!', 'success');
-            } catch { showToast('Не удалось скопировать ссылку.', 'error'); }
+            } catch { showToast('Не удалось скопировать.', 'error'); }
         }
 
         function openSupport() {
