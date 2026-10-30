@@ -388,30 +388,21 @@
     });
 
     // sendData работает только если Mini App открыт кнопкой reply-клавиатуры бота
-    function sendToBot(payload) {
-        if (!tg?.sendData) { showToast('❌ Откройте приложение через Telegram.', 'error'); return false; }
-        try {
-            tg.sendData(JSON.stringify(payload)); // при запуске с кнопки клавиатуры приложение закроется
-        } catch (err) {
-            console.error('sendData error:', err);
-            showToast('❌ ' + err.message, 'error');
-            return false;
-        }
-        // Если приложение не закрылось, значит оно открыто не кнопкой клавиатуры
-        setTimeout(() => {
-            showToast('Если приложение не закрылось, откройте его кнопкой «🎁 Открыть бонусы» внизу чата.', 'error');
-        }, 2000);
-        return true;
+function sendToBot(payload) {
+    if (!tg?.sendData) { showToast('❌ Откройте приложение через Telegram.', 'error'); return false; }
+    try {
+        tg.sendData(JSON.stringify(payload)); // при запуске с кнопки клавиатуры приложение закроется
+    } catch (err) {
+        console.error('sendData error:', err);
+        showToast('❌ ' + err.message, 'error');
+        return false;
     }
-        try {
-            tg.sendData(JSON.stringify(payload)); // приложение закроется, ответ придёт сообщением от бота
-            return true;
-        } catch (err) {
-            console.error('sendData error:', err);
-            showToast('❌ ' + err.message, 'error');
-            return false;
-        }
-    }
+    // Если приложение не закрылось, значит оно открыто не кнопкой клавиатуры
+    setTimeout(() => {
+        showToast('Если приложение не закрылось, откройте его кнопкой «🎁 Открыть бонусы» внизу чата.', 'error');
+    }, 2000);
+    return true;
+}
 
     function toggleTelegramId() {
         const id = document.getElementById('tg-id-display');
