@@ -357,11 +357,14 @@
             isVerified: false
         };
 
-        // Проверка start_param от бота (после проверки подписки)
-        // Бот присылает inline-кнопку с ?startapp=subscribed
+        // Обработка параметра startapp от бота (если подписка подтверждена)
         const startParam = tg?.initDataUnsafe?.start_param || '';
-        if (startParam === 'subscribed') {
+        if (startParam.startsWith('subscribed')) {
             state.isVerified = true;
+            const parts = startParam.split('_');
+            if (parts[1]) {
+                state.currentRewardType = parts[1];
+            }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -386,9 +389,8 @@
                 document.getElementById('ref-link').value = `https://t.me/${BOT_USERNAME}?start=${state.tgId}`;
             }
 
-            // Если бот подтвердил подписку — сразу показываем тост
             if (state.isVerified) {
-                showToast('Подписка подтверждена!', 'success');
+                showToast('Подписка успешно подтверждена!', 'success');
             }
 
             checkCooldowns();
@@ -463,14 +465,12 @@
             }
 
             state.currentRewardType = type;
-            
             document.getElementById('modal-title').innerText = type === 'pegas' ? 'Получение Доната PEGAS' : 'Получение ежедневного бонуса';
 
             const iconBox = document.getElementById('sub-status-icon');
             const btn = document.getElementById('modal-action-btn');
 
             if (state.isVerified) {
-                // Подписка уже подтверждена ботом (start_param=subscribed)
                 iconBox.className = 'w-7 h-7 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-xs';
                 iconBox.innerHTML = '<i class="fa-solid fa-check"></i>';
                 btn.innerText = 'ПОЛУЧИТЬ БОНУС';
@@ -490,22 +490,18 @@
             else window.open(CHANNEL_URL, '_blank', 'noopener,noreferrer');
         }
 
-        // Реальная логика: проверка подписки через бота, затем выдача награды
         function handleModalAction() {
             const btn = document.getElementById('modal-action-btn');
 
             if (!state.isVerified) {
-                // Шаг 1: просим сервер проверить подписку.
-                // sendData закроет MiniApp, бот ответит в чат inline-кнопкой
-                // "Открыть приложение" с ?startapp=subscribed (если подписан)
-                btn.innerText = 'ПРОВЕРЯЕМ...';
+                btn.innerText = 'ПРОВЕРЯЕМ ПОДПИСКУ...';
                 const payload = {
                     action: 'check_subscription',
                     nickname: state.nickname,
                     type: state.currentRewardType
                 };
                 try {
-                    if (!tg?.sendData) throw new Error('sendData недоступен. Откройте MiniApp через кнопку web_app.');
+                    if (!tg?.sendData) throw new Error('sendData недоступен. Откройте MiniApp через кнопку в боте.');
                     tg.sendData(JSON.stringify(payload));
                 } catch (err) {
                     console.error('sendData error:', err);
@@ -515,7 +511,7 @@
                 return;
             }
 
-            // Шаг 2: подписка уже подтверждена (start_param=subscribed) — выдаём награду
+            // Выдача награды
             const payload = {
                 action: 'claim_reward',
                 type: state.currentRewardType,
@@ -523,7 +519,7 @@
             };
 
             try {
-                if (!tg?.sendData) throw new Error('sendData недоступен. Откройте MiniApp через кнопку web_app.');
+                if (!tg?.sendData) throw new Error('sendData недоступен. Откройте MiniApp через кнопку в боте.');
                 tg.sendData(JSON.stringify(payload));
             } catch (err) {
                 console.error('sendData error:', err);
@@ -531,7 +527,6 @@
                 return;
             }
 
-            // Запоминаем выдачу в локальном хранилище (сервер — источник правды)
             if (state.currentRewardType === 'daily') {
                 localStorage.setItem('juicegrief_daily_cd', Date.now().toString());
                 startDailyTimer();
