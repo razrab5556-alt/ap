@@ -10,7 +10,7 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts: Montserrat, Inter & VT323 (Minecraft Style Pixel Font) -->
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Inter:wght@400;500;600&family=VT323&display=swap" rel="stylesheet">
     
     <script>
@@ -162,7 +162,6 @@
                         <p class="text-subText text-xs mt-1 leading-relaxed">
                             Нажми чтобы получить свой ежедневный бонус!
                         </p>
-                        <!-- Countdown timer display -->
                         <div id="timer-daily" class="text-xs font-mono text-orange-400 font-bold mt-2 hidden">
                             <i class="fa-solid fa-clock mr-1"></i> Доступно через: <span class="timer-value">00:00:00</span>
                         </div>
@@ -182,6 +181,9 @@
                         <p class="text-subText text-xs mt-1 leading-relaxed">
                             Нажми чтобы получить привилегию PEGAS навсегда!
                         </p>
+                        <div id="pegas-status-label" class="text-xs font-mono text-amber-400 font-bold mt-2 hidden">
+                            <i class="fa-solid fa-circle-check mr-1"></i> Уже получено
+                        </div>
                     </div>
 
                     <div class="absolute right-3 top-1/2 -translate-y-1/2 z-10 scale-90 sm:scale-100 pointer-events-none">
@@ -302,7 +304,7 @@
                 <p class="text-xs text-subText pl-12">Подпишитесь на наш официальный канал для продолжения</p>
             </div>
 
-            <!-- Task Item with dynamic status icon (Cross -> Checkmark) -->
+            <!-- Task Item -->
             <div class="space-y-3">
                 <div class="bg-inputBg border border-neutral-800 rounded-xl p-4 flex justify-between items-center">
                     <div class="flex items-center gap-3">
@@ -314,14 +316,13 @@
                             <a href="https://t.me/JuiceGriefTG" target="_blank" rel="noopener noreferrer" onclick="openChannelLink(); return false;" class="text-xs text-cyan-400 font-mono hover:underline">@JuiceGriefTG</a>
                         </div>
                     </div>
-                    <!-- Status Icon: Cross by default, switches to Green Checkmark -->
                     <div id="sub-status-icon" class="w-7 h-7 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-500 font-bold text-xs">
                         <i class="fa-solid fa-xmark"></i>
                     </div>
                 </div>
             </div>
 
-            <!-- Dynamic Action Button: Initially "Проверить подписку", changes to "ПОЛУЧИТЬ БОНУС" -->
+            <!-- Action Button -->
             <button id="modal-action-btn" onclick="handleModalAction()" class="w-full orange-btn py-4 rounded-xl font-black heading-font text-white uppercase text-sm tracking-wider">
                 Проверить подписку
             </button>
@@ -441,12 +442,19 @@
                 }
             }
 
+            if (type === 'pegas') {
+                const claimedPegas = localStorage.getItem('juicegrief_pegas_claimed');
+                if (claimedPegas) {
+                    showToast('Донат PEGAS уже был получен!', 'error');
+                    return;
+                }
+            }
+
             state.currentRewardType = type;
             state.isVerified = false;
             
             document.getElementById('modal-title').innerText = type === 'pegas' ? 'Получение Доната PEGAS' : 'Получение ежедневного бонуса';
             
-            // Сброс крестика и текста кнопки
             const iconBox = document.getElementById('sub-status-icon');
             iconBox.className = 'w-7 h-7 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-500 font-bold text-xs';
             iconBox.innerHTML = '<i class="fa-solid fa-xmark"></i>';
@@ -462,24 +470,26 @@
             else window.open(CHANNEL_URL, '_blank', 'noopener,noreferrer');
         }
 
-        // Пошаговая логика в модалке (Проверить -> Получить)
+        // Пошаговая логика отправки наград через tg.sendData()
         function handleModalAction() {
             const btn = document.getElementById('modal-action-btn');
             const iconBox = document.getElementById('sub-status-icon');
 
             if (!state.isVerified) {
                 btn.innerText = 'ПРОВЕРЯЕМ...';
+                
+                // Имитируем быструю проверку и переключаем на получение бонуса
                 setTimeout(() => {
                     state.isVerified = true;
-                    // Меняем крестик на зеленую галочку
                     iconBox.className = 'w-7 h-7 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-xs';
                     iconBox.innerHTML = '<i class="fa-solid fa-check"></i>';
                     
                     btn.innerText = 'ПОЛУЧИТЬ БОНУС';
                     showToast('Подписка подтверждена!', 'success');
-                }, 800);
+                }, 600);
+
             } else {
-                // Отправляем данные боту без закрытия приложения
+                // Отправляем JSON-пакет в телеграм-бот через sendData()
                 const payload = {
                     action: 'claim_reward',
                     type: state.currentRewardType,
@@ -488,15 +498,22 @@
 
                 if (tg?.sendData) {
                     tg.sendData(JSON.stringify(payload));
+                } else {
+                    showToast('Откройте приложение внутри Telegram!', 'error');
+                    return;
                 }
 
+                // Запоминаем выдачу в локальном хранилище
                 if (state.currentRewardType === 'daily') {
                     localStorage.setItem('juicegrief_daily_cd', Date.now().toString());
                     startDailyTimer();
+                } else if (state.currentRewardType === 'pegas') {
+                    localStorage.setItem('juicegrief_pegas_claimed', 'true');
+                    document.getElementById('pegas-status-label').classList.remove('hidden');
                 }
 
                 closeTasksModal();
-                showToast('Запрос на выдачу награды отправлен!', 'success');
+                showToast('Награда успешно запрошена!', 'success');
             }
         }
 
@@ -528,6 +545,11 @@
             const lastClaim = localStorage.getItem('juicegrief_daily_cd');
             if (lastClaim && Date.now() - parseInt(lastClaim) < 86400000) {
                 startDailyTimer();
+            }
+
+            const claimedPegas = localStorage.getItem('juicegrief_pegas_claimed');
+            if (claimedPegas) {
+                document.getElementById('pegas-status-label').classList.remove('hidden');
             }
         }
 
