@@ -97,6 +97,12 @@
             font-weight: 700;
             overflow-wrap: anywhere;
         }
+        .sensitive-blur {
+            filter: blur(6px);
+            user-select: none;
+            transition: filter .2s ease;
+        }
+        .sensitive-blur.revealed { filter: none; user-select: text; }
 
         .card-gradient {
             background: linear-gradient(145deg, #1d1e24 0%, #141519 100%);
@@ -205,7 +211,6 @@
                 <h1 class="text-2xl font-black heading-font tracking-wide uppercase flex items-center justify-center gap-1.5">
                     Приветствую, <span id="user-name" class="text-white">Игрок</span>!
                 </h1>
-                <p id="tg-username" class="text-orange-400 text-sm font-semibold mt-1">@telegram</p>
                 <p class="text-subText text-xs mt-1">Добро пожаловать в JuiceGrief</p>
             </div>
 
@@ -279,11 +284,10 @@
                 <!-- Telegram identity -->
                 <div class="bg-inputBg rounded-xl p-3 flex justify-between items-center gap-3">
                     <span class="profile-label">Telegram ID</span>
-                    <span id="tg-id-display" class="profile-value font-mono text-orange-400">Не получен</span>
-                </div>
-                <div class="bg-inputBg rounded-xl p-3 flex justify-between items-center gap-3">
-                    <span class="profile-label">Telegram ник</span>
-                    <span id="tg-username-display" class="profile-value text-cyan-400">@не указан</span>
+                    <div class="flex items-center gap-3">
+                        <span id="tg-id-display" class="profile-value font-mono text-orange-400 sensitive-blur" aria-label="Скрытый Telegram ID">••••••••</span>
+                        <button type="button" id="tg-id-toggle" onclick="toggleTelegramId()" class="text-xs text-orange-400 font-bold">Показать</button>
+                    </div>
                 </div>
 
                 <!-- Nickname Status -->
@@ -413,9 +417,7 @@
                             <a href="https://t.me/JuiceGriefTG" target="_blank" rel="noopener noreferrer" onclick="openChannelLink(); return false;" class="text-xs text-cyan-400 font-mono hover:underline">@JuiceGriefTG</a>
                         </div>
                     </div>
-                    <button onclick="toggleChannelSub()" id="ch-sub-btn" class="w-8 h-8 rounded-full bg-red-500/20 text-red-500 border border-red-500/40 flex items-center justify-center transition-colors">
-                        <i id="ch-sub-icon" class="fa-solid fa-xmark text-sm"></i>
-                    </button>
+                    <span id="ch-sub-status" class="text-xs text-neutral-400">Не проверено</span>
                 </div>
             </div>
 
@@ -439,252 +441,206 @@
     <!-- APPLICATION LOGIC SCRIPT -->
     <script>
         const tg = window.Telegram?.WebApp;
-        if (tg) {
-            tg.ready();
-            tg.expand();
-        }
+        if (tg) { tg.ready(); tg.expand(); }
 
+        // Укажите публичный HTTPS-адрес backend-сервера из server.js
+        const API_BASE_URL = window.JUICEGRIEF_API_URL || window.location.origin;
+        const BOT_USERNAME = 'JuiceGriefTG';
+        const CHANNEL_URL = 'https://t.me/JuiceGriefTG';
+
+        const telegramUser = tg?.initDataUnsafe?.user || null;
         const state = {
-            telegramUser: tg?.initDataUnsafe?.user || null,
-            tgId: tg?.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : '',
-            tgUsername: tg?.initDataUnsafe?.user?.username
-                ? '@' + tg.initDataUnsafe.user.username
-                : 'username не указан',
-            userName: tg?.initDataUnsafe?.user
-                ? ([tg.initDataUnsafe.user.first_name, tg.initDataUnsafe.user.last_name].filter(Boolean).join(' ').trim()
-                    || tg.initDataUnsafe.user.username
-                    || 'Игрок')
-                : 'Откройте через Telegram',
-            photoUrl: tg?.initDataUnsafe?.user?.photo_url || null,
-            storagePrefix: tg?.initDataUnsafe?.user?.id ? `juicegrief_${tg.initDataUnsafe.user.id}_` : 'juicegrief_guest_',
+            tgId: telegramUser?.id ? String(telegramUser.id) : '',
+            userName: telegramUser ? ([telegramUser.first_name, telegramUser.last_name].filter(Boolean).join(' ').trim() || 'Игрок') : 'Откройте через Telegram',
+            photoUrl: telegramUser?.photo_url || null,
             nickname: '',
             claimedPegas: false,
             lastDailyClaim: 0,
-            isSubscribedJuiceGrief: false,
-            currentRewardType: 'daily'
+            currentRewardType: 'daily',
+            subscriptionVerified: false,
+            profileLoaded: false
         };
 
-        document.addEventListener('DOMContentLoaded', () => {
-            // Display Real TG ID, User Name & Photo
+        function apiUrl(path) {
+            if (!API_BASE_URL || API_BASE_URL.includes('YOUR-DOMAIN')) {
+                throw new Error('Сначала укажите адрес backend-сервера в JUICEGRIEF_API_URL.');
+            }
+            return API_BASE_URL.replace(/\/$/, '') + path;
+        }
+
+        async function apiRequest(path, options = {}) {
+            if (!tg?.initData) throw new Error('Откройте Mini App через Telegram.');
+            const response = await fetch(apiUrl(path), {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Telegram-Init-Data': tg.initData,
+                    ...(options.headers || {})
+                }
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || data.ok === false) throw new Error(data.error || 'Ошибка сервера. Попробуйте позже.');
+            return data;
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('user-name').innerText = state.userName;
             document.getElementById('tg-id-display').innerText = state.tgId || 'Недоступен';
-            document.getElementById('tg-username').innerText = state.tgUsername;
-            document.getElementById('tg-username-display').innerText = state.tgUsername;
-            document.getElementById('ref-link').value = state.tgId
-                ? `https://t.me/JuiceGriefTG?start=${state.tgId}`
-                : 'Откройте приложение через Telegram';
 
-            state.nickname = localStorage.getItem(state.storagePrefix + 'mc_nickname') || '';
-            state.claimedPegas = localStorage.getItem(state.storagePrefix + 'claimed_pegas') === 'true';
-            state.lastDailyClaim = parseInt(localStorage.getItem(state.storagePrefix + 'last_daily_claim') || '0', 10);
-
-            const userPhotoImg = document.getElementById('user-photo');
-            const avatarInitial = document.getElementById('avatar-initial');
-
+            const photo = document.getElementById('user-photo');
+            const initial = document.getElementById('avatar-initial');
             if (state.photoUrl) {
-                userPhotoImg.src = state.photoUrl;
-                userPhotoImg.referrerPolicy = 'no-referrer';
-                userPhotoImg.classList.remove('hidden');
-                avatarInitial.classList.add('hidden');
+                photo.src = state.photoUrl;
+                photo.referrerPolicy = 'no-referrer';
+                photo.classList.remove('hidden');
+                initial.classList.add('hidden');
             } else {
-                avatarInitial.innerText = state.telegramUser
-                    ? (state.userName.charAt(0).toUpperCase() || 'J')
-                    : 'J';
+                initial.innerText = state.userName.charAt(0).toUpperCase() || 'J';
             }
 
-            if (!state.telegramUser) {
-                showToast('Откройте Mini App из Telegram, чтобы загрузить ваш профиль.', 'info');
+            // Локально храним только отображаемый игровой ник; реферальные данные и награды — на сервере.
+            state.nickname = localStorage.getItem('juicegrief_mc_nickname') || '';
+            if (state.nickname) renderLinkedState();
+
+            if (!telegramUser || !tg?.initData) {
+                showToast('Откройте Mini App через Telegram.', 'error');
+                return;
             }
 
-            if (state.nickname) {
-                renderLinkedState();
+            try {
+                const profile = await apiRequest('/api/me');
+                state.profileLoaded = true;
+                document.getElementById('ref-link').value = profile.referralLink;
+                document.getElementById('ref-count').innerText = String(profile.referralsCount ?? 0);
+                document.getElementById('ref-earned').innerText = String(profile.referralPoints ?? 0);
+            } catch (error) {
+                showToast(error.message, 'error');
             }
         });
+
+        function toggleTelegramId() {
+            const id = document.getElementById('tg-id-display');
+            const button = document.getElementById('tg-id-toggle');
+            const revealed = id.classList.toggle('revealed');
+            button.innerText = revealed ? 'Скрыть' : 'Показать';
+        }
 
         function switchTab(tabName) {
             const homeTab = document.getElementById('tab-home');
             const profileTab = document.getElementById('tab-profile');
             const navHome = document.getElementById('nav-home');
             const navProfile = document.getElementById('nav-profile');
-
             if (tabName === 'home') {
-                homeTab.classList.remove('hidden');
-                profileTab.classList.add('hidden');
+                homeTab.classList.remove('hidden'); profileTab.classList.add('hidden');
                 navHome.className = 'flex flex-col items-center gap-1 text-accentOrange transition-colors';
                 navProfile.className = 'flex flex-col items-center gap-1 text-subText hover:text-white transition-colors';
             } else {
-                homeTab.classList.add('hidden');
-                profileTab.classList.remove('hidden');
+                homeTab.classList.add('hidden'); profileTab.classList.remove('hidden');
                 navHome.className = 'flex flex-col items-center gap-1 text-subText hover:text-white transition-colors';
                 navProfile.className = 'flex flex-col items-center gap-1 text-accentOrange transition-colors';
             }
         }
 
-        function linkAccount() {
-            if (!state.tgId) {
-                showToast('Откройте приложение через Telegram, чтобы привязать аккаунт.', 'error');
-                return;
-            }
-            const nickInput = document.getElementById('mc-nickname');
-            const nick = nickInput.value.trim();
-
-            if (!nick) {
-                showToast('Введите никнейм!', 'error');
-                return;
-            }
-
-            const regex = /^[a-zA-Z0-9_]{3,16}$/;
-            if (!regex.test(nick)) {
-                showToast('Ник содержит ошибки! (3-16 символов)', 'error');
-                return;
-            }
-
+        async function linkAccount() {
+            if (!state.tgId) return showToast('Откройте приложение через Telegram.', 'error');
+            const nick = document.getElementById('mc-nickname').value.trim();
+            if (!/^[a-zA-Z0-9_]{3,16}$/.test(nick)) return showToast('Ник должен содержать 3–16 символов: латиница, цифры или _.', 'error');
+            // До появления отдельного API для игрового ника сохраняем его локально.
             state.nickname = nick;
-            localStorage.setItem(state.storagePrefix + 'mc_nickname', nick);
+            localStorage.setItem('juicegrief_mc_nickname', nick);
             renderLinkedState();
-            showToast('Аккаунт успешно привязан!', 'success');
+            showToast('Игровой ник сохранён.', 'success');
         }
 
         function renderLinkedState() {
             const statusEl = document.getElementById('nick-status');
             statusEl.innerText = state.nickname;
             statusEl.className = 'text-xs font-black uppercase text-green-400 tracking-wider';
-
-            const container = document.getElementById('nick-input-container');
-            container.innerHTML = `
+            document.getElementById('nick-input-container').innerHTML = `
                 <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 text-center">
-                    <p class="text-xs text-emerald-400 font-bold">
-                        <i class="fa-solid fa-circle-check mr-1"></i> Привязан к ${state.nickname}
-                    </p>
-                </div>
-            `;
+                    <p class="text-xs text-emerald-400 font-bold"><i class="fa-solid fa-circle-check mr-1"></i> Привязан к ${escapeHtml(state.nickname)}</p>
+                </div>`;
+        }
+
+        function escapeHtml(value) {
+            return String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
         }
 
         function openTasksModal(type) {
-            if (!state.tgId) {
-                showToast('Откройте приложение через Telegram.', 'error');
-                return;
-            }
-            if (!state.nickname) {
-                showToast('Сначала привяжите ник в профиле!', 'error');
-                switchTab('profile');
-                return;
-            }
-
+            if (!state.tgId) return showToast('Откройте приложение через Telegram.', 'error');
+            if (!state.nickname) { showToast('Сначала привяжите ник в профиле!', 'error'); switchTab('profile'); return; }
             state.currentRewardType = type;
-
-            if (type === 'pegas' && state.claimedPegas) {
-                showToast('Вы уже получали донат Pegas!', 'info');
-                return;
-            }
-
-            const modalTitle = document.getElementById('modal-title');
-            if (type === 'pegas') {
-                modalTitle.innerText = 'Подпишись для получения Доната PEGAS';
-            } else {
-                modalTitle.innerText = 'Подпишись для получения Ежедневного бонуса';
-            }
-
+            document.getElementById('modal-title').innerText = type === 'pegas'
+                ? 'Подпишись для получения Доната PEGAS'
+                : 'Подпишись для получения ежедневного бонуса';
+            document.getElementById('ch-sub-status').innerText = 'Не проверено';
             document.getElementById('tasks-modal').classList.remove('hidden');
         }
 
-        function closeTasksModal() {
-            document.getElementById('tasks-modal').classList.add('hidden');
-        }
+        function closeTasksModal() { document.getElementById('tasks-modal').classList.add('hidden'); }
 
         function openChannelLink() {
-            if (tg && tg.openTelegramLink) {
-                tg.openTelegramLink('https://t.me/JuiceGriefTG');
-            } else {
-                window.open('https://t.me/JuiceGriefTG', '_blank');
-            }
+            if (tg?.openTelegramLink) tg.openTelegramLink(CHANNEL_URL);
+            else window.open(CHANNEL_URL, '_blank', 'noopener,noreferrer');
         }
 
-        function toggleChannelSub() {
-            state.isSubscribedJuiceGrief = !state.isSubscribedJuiceGrief;
-            const btn = document.getElementById('ch-sub-btn');
-            const icon = document.getElementById('ch-sub-icon');
-
-            if (state.isSubscribedJuiceGrief) {
-                btn.className = 'w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center transition-colors';
-                icon.className = 'fa-solid fa-check text-sm';
-            } else {
-                btn.className = 'w-8 h-8 rounded-full bg-red-500/20 text-red-500 border border-red-500/40 flex items-center justify-center transition-colors';
-                icon.className = 'fa-solid fa-xmark text-sm';
-            }
-        }
-
-        function verifyAndClaim() {
-            // Dynamic check simulation for @JuiceGriefTG
-            if (!state.isSubscribedJuiceGrief) {
-                showToast('Вы отписаны или не подписались на @JuiceGriefTG!', 'error');
-                return;
-            }
-
-            if (state.currentRewardType === 'pegas') {
-                if (state.claimedPegas) {
-                    showToast('Вы уже получили этот донат!', 'info');
-                    closeTasksModal();
+        async function verifyAndClaim() {
+            const button = document.querySelector('#tasks-modal button[onclick="verifyAndClaim()"]');
+            const status = document.getElementById('ch-sub-status');
+            button.disabled = true;
+            button.classList.add('opacity-60');
+            button.innerText = 'ПРОВЕРЯЕМ...';
+            try {
+                const check = await apiRequest('/api/check-subscription', { method: 'POST', body: JSON.stringify({}) });
+                if (!check.subscribed) {
+                    status.innerText = 'Не подписан';
+                    showToast('Подписка на @JuiceGriefTG не найдена. Подпишитесь и проверьте снова.', 'error');
                     return;
                 }
-                state.claimedPegas = true;
-                localStorage.setItem(state.storagePrefix + 'claimed_pegas', 'true');
+                status.innerText = 'Подписка подтверждена';
+                state.subscriptionVerified = true;
+                const result = await apiRequest('/api/claim', {
+                    method: 'POST',
+                    body: JSON.stringify({ type: state.currentRewardType, minecraftNick: state.nickname })
+                });
+                if (state.currentRewardType === 'pegas') state.claimedPegas = true;
                 closeTasksModal();
-                showToast('🎉 Донат PEGAS успешно выдан игроку ' + state.nickname + '!', 'success');
-            } else {
-                const now = Date.now();
-                const cooldown = 24 * 60 * 60 * 1000;
-
-                if (now - state.lastDailyClaim < cooldown) {
-                    const remaining = cooldown - (now - state.lastDailyClaim);
-                    const hours = Math.floor(remaining / (1000 * 60 * 60));
-                    const mins = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
-                    showToast(`Следующая награда через ${hours}ч ${mins}м`, 'info');
-                    closeTasksModal();
-                    return;
-                }
-
-                state.lastDailyClaim = now;
-                localStorage.setItem(state.storagePrefix + 'last_daily_claim', now.toString());
-                closeTasksModal();
-                showToast('🎁 Ежедневный бонус выдан!', 'success');
+                showToast(result.message || 'Подписка подтверждена, заявка зарегистрирована.', 'success');
+            } catch (error) {
+                showToast(error.message, 'error');
+            } finally {
+                button.disabled = false;
+                button.classList.remove('opacity-60');
+                button.innerText = 'Проверить подписку';
             }
         }
 
-        function copyRefLink() {
-            const copyText = document.getElementById("ref-link");
-            copyText.select();
-            document.execCommand("copy");
-            showToast('Ссылка скопирована!', 'success');
+        async function copyRefLink() {
+            const value = document.getElementById('ref-link').value;
+            if (!value || value.startsWith('Откройте')) return showToast('Реферальная ссылка пока недоступна.', 'error');
+            try {
+                if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(value);
+                else { const field = document.getElementById('ref-link'); field.select(); document.execCommand('copy'); }
+                showToast('Реферальная ссылка скопирована!', 'success');
+            } catch { showToast('Не удалось скопировать ссылку.', 'error'); }
         }
 
         function openSupport() {
-            const supportUrl = 'https://dsc.gg/juicegrief';
-            if (tg?.openLink) {
-                tg.openLink(supportUrl);
-            } else {
-                window.open(supportUrl, '_blank', 'noopener,noreferrer');
-            }
+            const url = 'https://dsc.gg/juicegrief';
+            if (tg?.openLink) tg.openLink(url);
+            else window.open(url, '_blank', 'noopener,noreferrer');
         }
 
         function showToast(message, type = 'info') {
             const toast = document.getElementById('toast');
             const msgEl = document.getElementById('toast-msg');
             const iconEl = document.getElementById('toast-icon');
-
             msgEl.innerText = message;
-
-            if (type === 'success') {
-                iconEl.className = 'fa-solid fa-circle-check text-emerald-400 text-lg';
-            } else if (type === 'error') {
-                iconEl.className = 'fa-solid fa-circle-exclamation text-red-500 text-lg';
-            } else {
-                iconEl.className = 'fa-solid fa-circle-info text-accentOrange text-lg';
-            }
-
+            if (type === 'success') iconEl.className = 'fa-solid fa-circle-check text-emerald-400 text-lg';
+            else if (type === 'error') iconEl.className = 'fa-solid fa-circle-exclamation text-red-500 text-lg';
+            else iconEl.className = 'fa-solid fa-circle-info text-accentOrange text-lg';
             toast.classList.remove('-translate-y-20', 'opacity-0', 'pointer-events-none');
             toast.classList.add('translate-y-0', 'opacity-100');
-
             setTimeout(() => {
                 toast.classList.remove('translate-y-0', 'opacity-100');
                 toast.classList.add('-translate-y-20', 'opacity-0', 'pointer-events-none');
