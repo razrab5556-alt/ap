@@ -340,308 +340,213 @@
     </div>
 
     <!-- SCRIPT -->
-    <script>
-        const tg = window.Telegram?.WebApp;
-        if (tg) { tg.ready(); tg.expand(); }
+<script>
+    const tg = window.Telegram?.WebApp;
+    if (tg) { tg.ready(); tg.expand(); }
 
-        const BOT_USERNAME = 'JuiceGriefTG';
-        const CHANNEL_URL = 'https://t.me/JuiceGriefTG';
+    const BOT_USERNAME = 'JuiceGriefTG';
+    const CHANNEL_URL = 'https://t.me/JuiceGriefTG';
+    const DAY = 86400000;
 
-        const telegramUser = tg?.initDataUnsafe?.user || null;
-        const state = {
-            tgId: telegramUser?.id ? String(telegramUser.id) : '',
-            userName: telegramUser ? ([telegramUser.first_name, telegramUser.last_name].filter(Boolean).join(' ').trim() || 'Игрок') : 'Откройте через Telegram',
-            photoUrl: telegramUser?.photo_url || null,
-            nickname: '',
-            currentRewardType: 'daily',
-            isVerified: false
-        };
+    // Состояние приходит от бота через URL (источник правды — сервер)
+    const params = new URLSearchParams(location.search);
+    const telegramUser = tg?.initDataUnsafe?.user || null;
+    const state = {
+        tgId: telegramUser?.id ? String(telegramUser.id) : '',
+        userName: telegramUser ? ([telegramUser.first_name, telegramUser.last_name].filter(Boolean).join(' ').trim() || 'Игрок') : 'Откройте через Telegram',
+        photoUrl: telegramUser?.photo_url || null,
+        nickname: (params.get('nick') || '').trim(),
+        dailyLast: parseInt(params.get('d') || '0', 10) || 0,
+        pegasClaimed: params.get('p') === '1',
+        refCount: parseInt(params.get('r') || '0', 10) || 0,
+        currentRewardType: 'daily'
+    };
 
-        // Обработка возврата из бота после проверки подписки
-        const startParam = tg?.initDataUnsafe?.start_param || '';
-        if (startParam.startsWith('subscribed')) {
-            state.isVerified = true;
-            const parts = startParam.split('_');
-            if (parts[1]) {
-                state.currentRewardType = parts[1];
-            }
+    let dailyInterval = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('user-name').innerText = state.userName;
+        document.getElementById('tg-id-display').innerText = state.tgId || 'Недоступен';
+
+        const photo = document.getElementById('user-photo');
+        const initial = document.getElementById('avatar-initial');
+        if (state.photoUrl) {
+            photo.src = state.photoUrl;
+            photo.referrerPolicy = 'no-referrer';
+            photo.classList.remove('hidden');
+            initial.classList.add('hidden');
+        } else {
+            initial.innerText = state.userName.charAt(0).toUpperCase() || 'J';
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('user-name').innerText = state.userName;
-            document.getElementById('tg-id-display').innerText = state.tgId || 'Недоступен';
+        if (state.nickname) renderLinkedState();
+        document.getElementById('ref-count').innerText = state.refCount;
+        if (state.tgId) {
+            document.getElementById('ref-link').value = `https://t.me/${BOT_USERNAME}?start=${state.tgId}`;
+        }
+        checkCooldowns();
+    });
 
-            const photo = document.getElementById('user-photo');
-            const initial = document.getElementById('avatar-initial');
-            if (state.photoUrl) {
-                photo.src = state.photoUrl;
-                photo.referrerPolicy = 'no-referrer';
-                photo.classList.remove('hidden');
-                initial.classList.add('hidden');
-            } else {
-                initial.innerText = state.userName.charAt(0).toUpperCase() || 'J';
-            }
+    // sendData работает только если Mini App открыт кнопкой reply-клавиатуры бота
+    function sendToBot(payload) {
+        if (!tg?.sendData) { showToast('❌ Откройте приложение через Telegram.', 'error'); return false; }
+        if (tg.initDataUnsafe?.query_id) {
+            showToast('❌ Откройте приложение кнопкой «🎁 Открыть бонусы» (отправьте боту /start).', 'error');
+            return false;
+        }
+        try {
+            tg.sendData(JSON.stringify(payload)); // приложение закроется, ответ придёт сообщением от бота
+            return true;
+        } catch (err) {
+            console.error('sendData error:', err);
+            showToast('❌ ' + err.message, 'error');
+            return false;
+        }
+    }
 
-            loadLocalBinding();
+    function toggleTelegramId() {
+        const id = document.getElementById('tg-id-display');
+        const button = document.getElementById('tg-id-toggle');
+        const revealed = id.classList.toggle('revealed');
+        button.innerText = revealed ? 'Скрыть' : 'Показать';
+    }
 
-            if (state.tgId) {
-                document.getElementById('ref-link').value = `https://t.me/${BOT_USERNAME}?start=${state.tgId}`;
-            }
+    function switchTab(tabName) {
+        const homeTab = document.getElementById('tab-home');
+        const profileTab = document.getElementById('tab-profile');
+        const navHome = document.getElementById('nav-home');
+        const navProfile = document.getElementById('nav-profile');
+        if (tabName === 'home') {
+            homeTab.classList.remove('hidden'); profileTab.classList.add('hidden');
+            navHome.className = 'flex flex-col items-center gap-1 text-accentOrange transition-colors';
+            navProfile.className = 'flex flex-col items-center gap-1 text-subText hover:text-white transition-colors';
+        } else {
+            homeTab.classList.add('hidden'); profileTab.classList.remove('hidden');
+            navHome.className = 'flex flex-col items-center gap-1 text-subText hover:text-white transition-colors';
+            navProfile.className = 'flex flex-col items-center gap-1 text-accentOrange transition-colors';
+        }
+    }
 
-            if (state.isVerified) {
-                showToast('Подписка подтверждена! Нажмите "Получить бонус".', 'success');
-            }
+    function linkAccount() {
+        if (!state.tgId) return showToast('Ошибка: откройте приложение через Telegram.', 'error');
+        if (state.nickname) {
+            return showToast('❌ Аккаунт уже привязан к нику "' + state.nickname + '". Изменять нельзя!', 'error');
+        }
+        const nick = document.getElementById('mc-nickname').value.trim();
+        if (!/^[a-zA-Z0-9_]{3,16}$/.test(nick)) {
+            return showToast('❌ Ник должен содержать 3–16 символов (латиница, цифры, _).', 'error');
+        }
+        // Бот проверит ник, привяжет и пришлёт подтверждение
+        sendToBot({ action: 'link', nickname: nick });
+    }
 
-            checkCooldowns();
+    function renderLinkedState() {
+        const statusEl = document.getElementById('nick-status');
+        statusEl.innerText = state.nickname;
+        statusEl.className = 'text-xs font-black uppercase text-green-400 tracking-wider';
+        document.getElementById('nick-input-container').innerHTML = `
+            <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 text-center">
+                <p class="text-xs text-emerald-400 font-bold"><i class="fa-solid fa-circle-check mr-1"></i> Привязан к ${escapeHtml(state.nickname)}</p>
+            </div>`;
+    }
+
+    function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function openTasksModal(type) {
+        if (!state.tgId) return showToast('Ошибка: откройте приложение через Telegram.', 'error');
+        if (!state.nickname) {
+            showToast('❌ Сначала привяжите свой ник в профиле!', 'error');
+            switchTab('profile');
+            return;
+        }
+        if (type === 'daily' && state.dailyLast && Date.now() - state.dailyLast < DAY) {
+            return showToast('⏳ Ежедневный бонус уже получен! Ждите таймер.', 'error');
+        }
+        if (type === 'pegas' && state.pegasClaimed) {
+            return showToast('⚠️ Донат PEGAS уже был получен ранее!', 'error');
+        }
+
+        state.currentRewardType = type;
+        document.getElementById('modal-title').innerText =
+            type === 'pegas' ? 'Получение Доната PEGAS' : 'Получение ежедневного бонуса';
+        document.getElementById('modal-action-btn').innerText = 'Получить награду';
+        document.getElementById('tasks-modal').classList.remove('hidden');
+    }
+
+    function closeTasksModal() { document.getElementById('tasks-modal').classList.add('hidden'); }
+
+    function openChannelLink() {
+        if (tg?.openTelegramLink) tg.openTelegramLink(CHANNEL_URL);
+        else window.open(CHANNEL_URL, '_blank', 'noopener,noreferrer');
+    }
+
+    function handleModalAction() {
+        // Бот сам проверит подписку, кулдаун и привязку, затем выдаст награду и напишет результат
+        sendToBot({
+            action: 'claim',
+            type: state.currentRewardType,
+            nickname: state.nickname
         });
+    }
 
-        function loadLocalBinding() {
-            const savedNick = localStorage.getItem('juicegrief_mc_nickname');
-            const savedTgId = localStorage.getItem('juicegrief_tg_id');
+    function startDailyTimer() {
+        const timerEl = document.getElementById('timer-daily');
+        const valEl = timerEl.querySelector('.timer-value');
+        timerEl.classList.remove('hidden');
+        clearInterval(dailyInterval);
 
-            // Защита: если зашли с другого телеграм аккаунта
-            if (savedTgId && savedTgId !== state.tgId) {
-                localStorage.removeItem('juicegrief_mc_nickname');
-                localStorage.removeItem('juicegrief_tg_id');
-                state.nickname = '';
+        const tick = () => {
+            const diff = DAY - (Date.now() - state.dailyLast);
+            if (diff <= 0) {
+                timerEl.classList.add('hidden');
+                clearInterval(dailyInterval);
                 return;
             }
+            const h = String(Math.floor(diff / 3600000)).padStart(2, '0');
+            const m = String(Math.floor((diff / 60000) % 60)).padStart(2, '0');
+            const s = String(Math.floor((diff / 1000) % 60)).padStart(2, '0');
+            valEl.innerText = `${h}:${m}:${s}`;
+        };
+        tick();
+        dailyInterval = setInterval(tick, 1000);
+    }
 
-            if (savedNick) {
-                state.nickname = savedNick;
-                renderLinkedState();
-            }
-        }
+    function checkCooldowns() {
+        if (state.dailyLast && Date.now() - state.dailyLast < DAY) startDailyTimer();
+        if (state.pegasClaimed) document.getElementById('pegas-status-label').classList.remove('hidden');
+    }
 
-        function toggleTelegramId() {
-            const id = document.getElementById('tg-id-display');
-            const button = document.getElementById('tg-id-toggle');
-            const revealed = id.classList.toggle('revealed');
-            button.innerText = revealed ? 'Скрыть' : 'Показать';
-        }
+    async function copyRefLink() {
+        const value = document.getElementById('ref-link').value;
+        try {
+            if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(value);
+            showToast('✅ Реферальная ссылка скопирована!', 'success');
+        } catch { showToast('❌ Не удалось скопировать.', 'error'); }
+    }
 
-        function switchTab(tabName) {
-            const homeTab = document.getElementById('tab-home');
-            const profileTab = document.getElementById('tab-profile');
-            const navHome = document.getElementById('nav-home');
-            const navProfile = document.getElementById('nav-profile');
-            if (tabName === 'home') {
-                homeTab.classList.remove('hidden'); profileTab.classList.add('hidden');
-                navHome.className = 'flex flex-col items-center gap-1 text-accentOrange transition-colors';
-                navProfile.className = 'flex flex-col items-center gap-1 text-subText hover:text-white transition-colors';
-            } else {
-                homeTab.classList.add('hidden'); profileTab.classList.remove('hidden');
-                navHome.className = 'flex flex-col items-center gap-1 text-subText hover:text-white transition-colors';
-                navProfile.className = 'flex flex-col items-center gap-1 text-accentOrange transition-colors';
-            }
-        }
+    function openSupport() {
+        const url = 'https://dsc.gg/juicegrief';
+        if (tg?.openLink) tg.openLink(url);
+        else window.open(url, '_blank', 'noopener,noreferrer');
+    }
 
-        function linkAccount() {
-            if (!state.tgId) return showToast('Ошибка: откройте приложение через Telegram.', 'error');
-            
-            // Если ник уже привязан к этому ID — выводим ошибку что повторно нельзя
-            if (state.nickname) {
-                return showToast('❌ Этот аккаунт уже привязан к нику "' + state.nickname + '". Изменять его нельзя!', 'error');
-            }
-
-            const nick = document.getElementById('mc-nickname').value.trim();
-            if (!/^[a-zA-Z0-9_]{3,16}$/.test(nick)) {
-                return showToast('❌ Ник должен содержать 3–16 символов (латиница, цифры, _).', 'error');
-            }
-
-            // Проверка: занят ли этот ник другим Telegram ID на этом клиенте
-            const existingOwner = localStorage.getItem('juicegrief_nick_owner_' + nick);
-            if (existingOwner && existingOwner !== state.tgId) {
-                return showToast('❌ Ошибка: Этот игровой ник уже привязан к другому Telegram ID!', 'error');
-            }
-            
-            state.nickname = nick;
-            localStorage.setItem('juicegrief_mc_nickname', nick);
-            localStorage.setItem('juicegrief_tg_id', state.tgId);
-            localStorage.setItem('juicegrief_nick_owner_' + nick, state.tgId);
-
-            renderLinkedState();
-            showToast('✅ Игровой ник успешно привязан!', 'success');
-        }
-
-        function renderLinkedState() {
-            const statusEl = document.getElementById('nick-status');
-            statusEl.innerText = state.nickname;
-            statusEl.className = 'text-xs font-black uppercase text-green-400 tracking-wider';
-            document.getElementById('nick-input-container').innerHTML = `
-                <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 text-center">
-                    <p class="text-xs text-emerald-400 font-bold"><i class="fa-solid fa-circle-check mr-1"></i> Привязан к ${escapeHtml(state.nickname)}</p>
-                </div>`;
-        }
-
-        function escapeHtml(value) {
-            return String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-        }
-
-        function openTasksModal(type) {
-            if (!state.tgId) return showToast('Ошибка: откройте приложение через Telegram.', 'error');
-            if (!state.nickname) { 
-                showToast('❌ Сначала привяжите свой ник в профиле!', 'error'); 
-                switchTab('profile'); 
-                return; 
-            }
-            
-            if (type === 'daily') {
-                const lastClaim = localStorage.getItem('juicegrief_daily_cd');
-                if (lastClaim && Date.now() - parseInt(lastClaim) < 86400000) {
-                    showToast('⏳ Ежедневный бонус уже получен! Ждите таймер.', 'error');
-                    return;
-                }
-            }
-
-            if (type === 'pegas') {
-                const claimedPegas = localStorage.getItem('juicegrief_pegas_claimed');
-                if (claimedPegas) {
-                    showToast('⚠️ Донат PEGAS уже был получен ранее!', 'error');
-                    return;
-                }
-            }
-
-            state.currentRewardType = type;
-            document.getElementById('modal-title').innerText = type === 'pegas' ? 'Получение Доната PEGAS' : 'Получение ежедневного бонуса';
-
-            const iconBox = document.getElementById('sub-status-icon');
-            const btn = document.getElementById('modal-action-btn');
-
-            if (state.isVerified) {
-                iconBox.className = 'w-7 h-7 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-xs';
-                iconBox.innerHTML = '<i class="fa-solid fa-check"></i>';
-                btn.innerText = 'ПОЛУЧИТЬ НАГРАДУ';
-            } else {
-                iconBox.className = 'w-7 h-7 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-500 font-bold text-xs';
-                iconBox.innerHTML = '<i class="fa-solid fa-xmark"></i>';
-                btn.innerText = 'Проверить подписку';
-            }
-
-            document.getElementById('tasks-modal').classList.remove('hidden');
-        }
-
-        function closeTasksModal() { document.getElementById('tasks-modal').classList.add('hidden'); }
-
-        function openChannelLink() {
-            if (tg?.openTelegramLink) tg.openTelegramLink(CHANNEL_URL);
-            else window.open(CHANNEL_URL, '_blank', 'noopener,noreferrer');
-        }
-
-        function handleModalAction() {
-            const btn = document.getElementById('modal-action-btn');
-
-            if (!state.isVerified) {
-                btn.innerText = 'ПРОВЕРЯЕМ ПОДПИСКУ...';
-                const payload = {
-                    action: 'check_subscription',
-                    nickname: state.nickname,
-                    type: state.currentRewardType
-                };
-                try {
-                    if (!tg?.sendData) throw new Error('sendData недоступен. Откройте Mini App через кнопку бота.');
-                    tg.sendData(JSON.stringify(payload));
-                } catch (err) {
-                    console.error('sendData error:', err);
-                    btn.innerText = 'Проверить подписку';
-                    showToast('❌ ' + err.message, 'error');
-                }
-                return;
-            }
-
-            // Выдача награды
-            const payload = {
-                action: 'claim_reward',
-                type: state.currentRewardType,
-                nickname: state.nickname
-            };
-
-            try {
-                if (!tg?.sendData) throw new Error('sendData недоступен.');
-                tg.sendData(JSON.stringify(payload));
-            } catch (err) {
-                console.error('sendData error:', err);
-                showToast('❌ ' + err.message, 'error');
-                return;
-            }
-
-            if (state.currentRewardType === 'daily') {
-                localStorage.setItem('juicegrief_daily_cd', Date.now().toString());
-                startDailyTimer();
-            } else if (state.currentRewardType === 'pegas') {
-                localStorage.setItem('juicegrief_pegas_claimed', 'true');
-                document.getElementById('pegas-status-label').classList.remove('hidden');
-            }
-
-            closeTasksModal();
-            showToast('✅ Награда успешно запрошена!', 'success');
-        }
-
-        function startDailyTimer() {
-            const timerEl = document.getElementById('timer-daily');
-            const valEl = timerEl.querySelector('.timer-value');
-            timerEl.classList.remove('hidden');
-
-            const interval = setInterval(() => {
-                const lastClaim = localStorage.getItem('juicegrief_daily_cd');
-                if (!lastClaim) { timerEl.classList.add('hidden'); clearInterval(interval); return; }
-                
-                const diff = 86400000 - (Date.now() - parseInt(lastClaim));
-                if (diff <= 0) {
-                    timerEl.classList.add('hidden');
-                    localStorage.removeItem('juicegrief_daily_cd');
-                    clearInterval(interval);
-                    return;
-                }
-
-                const hours = String(Math.floor((diff / (1000 * 60 * 60)) % 24)).padStart(2, '0');
-                const minutes = String(Math.floor((diff / (1000 * 60)) % 60)).padStart(2, '0');
-                const seconds = String(Math.floor((diff / 1000) % 60)).padStart(2, '0');
-                valEl.innerText = `${hours}:${minutes}:${seconds}`;
-            }, 1000);
-        }
-
-        function checkCooldowns() {
-            const lastClaim = localStorage.getItem('juicegrief_daily_cd');
-            if (lastClaim && Date.now() - parseInt(lastClaim) < 86400000) {
-                startDailyTimer();
-            }
-
-            const claimedPegas = localStorage.getItem('juicegrief_pegas_claimed');
-            if (claimedPegas) {
-                document.getElementById('pegas-status-label').classList.remove('hidden');
-            }
-        }
-
-        async function copyRefLink() {
-            const value = document.getElementById('ref-link').value;
-            try {
-                if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(value);
-                showToast('✅ Реферальная ссылка скопирована!', 'success');
-            } catch { showToast('❌ Не удалось скопировать.', 'error'); }
-        }
-
-        function openSupport() {
-            const url = 'https://dsc.gg/juicegrief';
-            if (tg?.openLink) tg.openLink(url);
-            else window.open(url, '_blank', 'noopener,noreferrer');
-        }
-
-        function showToast(message, type = 'info') {
-            const toast = document.getElementById('toast');
-            const msgEl = document.getElementById('toast-msg');
-            const iconEl = document.getElementById('toast-icon');
-            msgEl.innerText = message;
-            if (type === 'success') iconEl.className = 'fa-solid fa-circle-check text-emerald-400 text-lg';
-            else if (type === 'error') iconEl.className = 'fa-solid fa-circle-exclamation text-red-500 text-lg';
-            else iconEl.className = 'fa-solid fa-circle-info text-accentOrange text-lg';
-            toast.classList.remove('-translate-y-20', 'opacity-0', 'pointer-events-none');
-            toast.classList.add('translate-y-0', 'opacity-100');
-            setTimeout(() => {
-                toast.classList.remove('translate-y-0', 'opacity-100');
-                toast.classList.add('-translate-y-20', 'opacity-0', 'pointer-events-none');
-            }, 3500);
-        }
-    </script>
+    function showToast(message, type = 'info') {
+        const toast = document.getElementById('toast');
+        const msgEl = document.getElementById('toast-msg');
+        const iconEl = document.getElementById('toast-icon');
+        msgEl.innerText = message;
+        if (type === 'success') iconEl.className = 'fa-solid fa-circle-check text-emerald-400 text-lg';
+        else if (type === 'error') iconEl.className = 'fa-solid fa-circle-exclamation text-red-500 text-lg';
+        else iconEl.className = 'fa-solid fa-circle-info text-accentOrange text-lg';
+        toast.classList.remove('-translate-y-20', 'opacity-0', 'pointer-events-none');
+        toast.classList.add('translate-y-0', 'opacity-100');
+        setTimeout(() => {
+            toast.classList.remove('translate-y-0', 'opacity-100');
+            toast.classList.add('-translate-y-20', 'opacity-0', 'pointer-events-none');
+        }, 3500);
+    }
+</script>
 </body>
 </html>
