@@ -2,85 +2,263 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Donate & Rewards - PEGAS</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Minecraft Bonus Bot Mini App</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Montserrat, Inter & VT323 (Minecraft Style Pixel Font) -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Inter:wght@400;500;600&family=VT323&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#0e0f12',
+                        cardBg: '#18191e',
+                        cardBorder: '#262830',
+                        accentOrange: '#ff8800',
+                        accentOrangeHover: '#e67a00',
+                        inputBg: '#21232b',
+                        subText: '#9ca3af'
+                    },
+                    fontFamily: {
+                        heading: ['Montserrat', 'sans-serif'],
+                        body: ['Inter', 'sans-serif'],
+                        pixel: ['VT323', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    
     <style>
         body {
-            background-color: #0c0a09;
+            background-color: #0e0f12;
             color: #ffffff;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
             overflow-x: hidden;
+            touch-action: manipulation;
         }
-        /* Стиль карточек с эффектом стекла и размытия */
-        .glass-card {
-            background: rgba(24, 20, 17, 0.75);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 140, 0, 0.15);
+
+        .heading-font {
+            font-family: 'Montserrat', sans-serif;
         }
-        .btn-orange {
-            background: linear-gradient(135deg, #ff8c00 0%, #ff6600 100%);
+
+        .pixel-font {
+            font-family: 'VT323', monospace;
+        }
+
+        /* Ambient glowing effects */
+        .ambient-glow {
+            position: absolute;
+            width: 250px;
+            height: 250px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 136, 0, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .avatar-glow {
+            box-shadow: 0 0 25px rgba(255, 136, 0, 0.6);
+        }
+
+        .card-gradient {
+            box-shadow: 0 12px 30px rgba(0, 0, 0, .18);
+            transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+        }
+        .card-gradient:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 149, 0, .42);
+            box-shadow: 0 16px 34px rgba(0, 0, 0, .28);
+        }
+        button, input { -webkit-tap-highlight-color: transparent; }
+        button:focus-visible, input:focus-visible {
+            outline: 2px solid rgba(255, 149, 0, .8);
+            outline-offset: 3px;
+        }
+        .profile-label {
+            color: #9ca3af;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: .09em;
+            text-transform: uppercase;
+        }
+        .profile-value {
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            overflow-wrap: anywhere;
+        }
+
+        .card-gradient {
+            background: linear-gradient(145deg, #1d1e24 0%, #141519 100%);
+            border: 1px solid #2a2c36;
+        }
+
+        .orange-btn {
+            background: linear-gradient(90deg, #ff9500 0%, #ff7700 100%);
+            box-shadow: 0 4px 15px rgba(255, 136, 0, 0.3);
             transition: all 0.2s ease;
         }
-        .btn-orange:active {
-            transform: scale(0.97);
+
+        .orange-btn:active {
+            transform: scale(0.98);
+            box-shadow: 0 2px 8px rgba(255, 136, 0, 0.2);
         }
+
+        /* Minecraft PEGAS Pixel Badge Styling */
+        .pixel-mc-badge {
+            display: inline-flex;
+            align-items: center;
+            background: #2a1608;
+            border: 3px solid #ffcc00;
+            outline: 2px solid #000;
+            box-shadow: inset 0 0 0 2px #573307;
+            padding: 2px 6px;
+            image-rendering: pixelated;
+        }
+
+        .pixel-icon-box {
+            width: 32px;
+            height: 32px;
+            background: #3d240d;
+            border: 2px solid #ffcc00;
+            box-shadow: inset 0 0 0 1px #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 4px;
+        }
+
+        .pixel-title-box {
+            background: #2e1a0a;
+            border: 2px solid #ffcc00;
+            box-shadow: inset 0 0 0 1px #000;
+            padding: 0px 10px;
+            color: #ffffff;
+            font-size: 22px;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px #000000;
+        }
+
+        /* Telegram Profile Icon Styling */
+        .tg-avatar-frame {
+            position: relative;
+            box-shadow: 0 0 25px rgba(255, 136, 0, 0.5);
+        }
+
+        .tg-badge-icon {
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            background: #0088cc;
+            color: #fff;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            border: 2px solid #0e0f12;
+        }
+
+        /* Custom Scrollbar */
         ::-webkit-scrollbar {
             width: 0px;
             background: transparent;
         }
     </style>
 </head>
-<body class="min-h-screen pb-28 flex flex-col justify-between">
+<body class="min-h-screen flex flex-col justify-between pb-24 relative selection:bg-orange-500 selection:text-white">
 
-    <!-- ОСНОВНОЙ КОНТЕЙНЕР -->
-    <div class="max-w-md mx-auto w-full p-4 space-y-4 flex-grow">
-        
-        <!-- ВКЛАДКА: ГЛАВНАЯ -->
-        <div id="tab-home" class="space-y-4">
-            <!-- Шапка профиля (в одну строку) -->
-            <div class="glass-card rounded-2xl p-4 flex items-center gap-3 shadow-xl">
-                <div id="user-avatar-container" class="relative w-12 h-12 rounded-full overflow-hidden border-2 border-orange-500/80 flex-shrink-0 flex items-center justify-center bg-zinc-800 text-orange-400 font-bold text-lg shadow-inner">
-                    <span id="user-initial">T</span>
+    <!-- Background Ambient Light -->
+    <div class="ambient-glow top-0 left-1/2 -translate-x-1/2"></div>
+    <div class="ambient-glow bottom-20 right-0"></div>
+
+    <!-- MAIN CONTAINER -->
+    <main class="w-full max-w-md mx-auto px-4 pt-6 z-10 flex-grow">
+
+        <!-- ==================== TAB 1: MAIN / HOME ==================== -->
+        <div id="tab-home" class="space-y-6">
+            
+            <!-- User Header Banner (With Telegram Photo & Real Name) -->
+            <div class="flex flex-col items-center justify-center pt-4 pb-2 text-center">
+                <div class="relative mb-3">
+                    <!-- Real TG Photo or Avatar Initial Fallback -->
+                    <div id="avatar-container" class="w-20 h-20 rounded-full bg-gradient-to-tr from-orange-500 to-amber-400 flex items-center justify-center text-white text-3xl font-bold tg-avatar-frame border-2 border-orange-500 overflow-hidden relative">
+                        <img id="user-photo" class="w-full h-full object-cover hidden" alt="Avatar" onerror="this.classList.add('hidden'); document.getElementById('avatar-initial').classList.remove('hidden');">
+                        <span id="avatar-initial">T</span>
+                        <div class="tg-badge-icon">
+                            <i class="fa-brands fa-telegram"></i>
+                        </div>
+                    </div>
                 </div>
-                <div class="overflow-hidden">
-                    <div class="text-[11px] text-zinc-400 tracking-wider">ПРИВЕТСТВУЮ,</div>
-                    <div id="user-name" class="text-base font-extrabold tracking-wide text-white truncate">Игрок</div>
-                </div>
+                <h1 class="text-2xl font-black heading-font tracking-wide uppercase flex items-center justify-center gap-1.5">
+                    Приветствую, <span id="user-name" class="text-white">Игрок</span>!
+                </h1>
+                <p id="tg-username" class="text-orange-400 text-sm font-semibold mt-1">@telegram</p>
+                <p class="text-subText text-xs mt-1">Добро пожаловать в JuiceGrief</p>
             </div>
 
-            <!-- БЛОК КАРТОЧЕК (Одинаковый размер и сетка) -->
-            <div class="grid grid-cols-1 gap-3">
+            <div class="w-full flex items-center justify-center my-2">
+                <div class="h-[1px] bg-neutral-800 w-1/3"></div>
+                <div class="w-1.5 h-1.5 rounded-full bg-neutral-700 mx-2"></div>
+                <div class="h-[1px] bg-neutral-800 w-1/3"></div>
+            </div>
+
+            <!-- BONUS CARDS CONTAINER -->
+            <div class="space-y-4">
                 
-                <!-- Карточка 1: Ежедневный бонус -->
-                <div onclick="openModal()" class="glass-card rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-orange-500/50 transition shadow-xl group">
-                    <div class="space-y-1">
-                        <div class="flex items-center gap-2">
-                            <span class="text-xl">🎁</span>
-                            <h3 class="font-black text-sm text-white tracking-wide">ЕЖЕДНЕВНЫЙ БОНУС</h3>
-                        </div>
-                        <p class="text-[11px] text-zinc-400">Получай ежедневную награду</p>
+                <!-- DAILY BONUS CARD -->
+                <div onclick="openTasksModal('daily')" class="card-gradient rounded-2xl p-5 relative overflow-hidden cursor-pointer hover:border-orange-500/50 transition-all duration-300 group">
+                    <div class="w-2/3 z-10 relative">
+                        <h2 class="text-lg font-black heading-font text-white uppercase tracking-wide flex items-center gap-2">
+                            <i class="fa-solid fa-calendar-days text-accentOrange"></i>
+                            Ежедневный бонус!
+                        </h2>
+                        <p class="text-subText text-xs mt-1 leading-relaxed">
+                            Нажми чтобы получить свой ежедневный бонус!
+                        </p>
                     </div>
-                    <div class="bg-zinc-900/90 p-2.5 rounded-xl border border-zinc-800/80 flex-shrink-0">
-                        <div class="w-10 h-10 bg-contain bg-center bg-no-repeat" style="background-image: url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22%23ff8c00%22><path d=%22M20 6h-2.18c.11-.31.18-.65.18-1a2.996 2.996 0 0 0-5.5-1.65l-.5.67-.5-.68C10.96 2.49 10.06 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1setItemzM11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.33l1.5 1.17L11 8h2l2.5 3.5 1.5-1.17L17.92 8H20v6z%22/></svg>');"></div>
+                    <!-- Pixel Cake Illustration -->
+                    <div class="absolute -right-2 -bottom-2 w-28 h-28 opacity-40 group-hover:opacity-70 transition-opacity flex items-center justify-center pointer-events-none">
+                        <i class="fa-solid fa-cake-candles text-7xl text-orange-400/30 transform -rotate-12"></i>
                     </div>
                 </div>
 
-                <!-- Карточка 2: ДОНАТ PEGAS (Стилевой аналог с пиксельным значком) -->
-                <div onclick="claimPegas()" class="glass-card rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-orange-500/50 transition shadow-xl group">
-                    <div class="space-y-1">
-                        <div class="flex items-center gap-2">
-                            <span class="text-xl">⭐</span>
-                            <h3 class="font-black text-sm text-white tracking-wide">ДОНАТ PEGAS</h3>
-                        </div>
-                        <p class="text-[11px] text-zinc-400">Забери привилегию на сервере</p>
+                <!-- PEGAS DONATE CARD (Replaces Wipe Bonus) -->
+                <div onclick="openTasksModal('pegas')" class="card-gradient rounded-2xl p-5 relative overflow-hidden cursor-pointer hover:border-orange-500/50 transition-all duration-300 group">
+                    <div class="w-1/2 z-10 relative">
+                        <h2 class="text-lg font-black heading-font text-white uppercase tracking-wide flex items-center gap-2">
+                            <i class="fa-solid fa-crown text-amber-400"></i>
+                            ДОНАТ PEGAS
+                        </h2>
+                        <p class="text-subText text-xs mt-1 leading-relaxed">
+                            Нажми чтобы получить привилегию PEGAS навсегда!
+                        </p>
                     </div>
-                    <div class="bg-zinc-900/90 p-2.5 rounded-xl border border-zinc-800/80 flex-shrink-0 flex items-center justify-center">
-                        <div class="px-2.5 py-1.5 bg-amber-950/80 border-2 border-amber-400/90 rounded-lg flex items-center gap-1.5 shadow-inner">
-                            <div class="w-3.5 h-3.5 bg-amber-400 rounded-sm shadow"></div>
-                            <span class="text-[11px] font-black tracking-wider text-white font-mono">PEGAS</span>
+
+                    <!-- MINECRAFT PEGAS BADGE ICON (As per image request) -->
+                    <div class="absolute right-3 top-1/2 -translate-y-1/2 z-10 scale-90 sm:scale-100 pointer-events-none">
+                        <div class="pixel-mc-badge">
+                            <div class="pixel-icon-box">
+                                <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M2 10H4V12H2V10ZM4 8H6V10H4V8ZM6 6H8V8H6V6ZM8 4H10V6H8V4ZM10 2H14V4H10V2ZM12 4H14V8H12V4ZM10 8H12V10H10V8ZM8 10H10V12H8V10ZM6 12H8V14H6V12ZM4 12H6V14H4V12Z" fill="#FFD700"/>
+                                    <path d="M4 10H6V12H4V10ZM6 8H8V10H6V8ZM8 6H10V8H8V6ZM10 4H12V6H10V4Z" fill="#FFF8DC"/>
+                                </svg>
+                            </div>
+                            <div class="pixel-title-box pixel-font">
+                                PEGAS
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -88,253 +266,429 @@
             </div>
         </div>
 
-        <!-- ВКЛАДКА: ПРОФИЛЬ -->
-        <div id="tab-profile" class="space-y-4 hidden">
-            <div class="glass-card rounded-2xl p-4 space-y-4 shadow-xl">
-                <h3 class="text-orange-500 font-black text-sm tracking-wider flex items-center gap-2">
-                    <span>🛡️</span> ВАШ АККАУНТ
-                </h3>
-                
-                <div class="space-y-3">
-                    <div>
-                        <label class="text-[10px] text-zinc-400 uppercase tracking-wider block mb-1">Telegram ID</label>
-                        <div id="profile-tg-id" class="w-full bg-zinc-900/90 border border-zinc-800/80 rounded-xl px-3 py-2.5 text-sm text-zinc-300 font-mono">
-                            Загрузка...
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="text-[10px] text-zinc-400 uppercase tracking-wider block mb-1">Игровой ник</label>
-                        <div id="profile-mc-status" class="w-full bg-zinc-900/90 border border-zinc-800/80 rounded-xl px-3 py-2.5 text-sm text-orange-400 font-bold">
-                            НЕ ПРИВЯЗАН
-                        </div>
-                    </div>
+        <!-- ==================== TAB 2: PROFILE ==================== -->
+        <div id="tab-profile" class="space-y-5 hidden">
+            
+            <!-- ACCOUNT SECTION -->
+            <div class="card-gradient rounded-2xl p-5 space-y-4">
+                <div class="flex items-center gap-2 text-accentOrange">
+                    <i class="fa-solid fa-user-shield text-lg"></i>
+                    <h2 class="text-base font-black heading-font uppercase text-white tracking-wider">Ваш аккаунт</h2>
                 </div>
 
-                <div class="bg-orange-500/10 border border-orange-500/20 rounded-xl p-3 flex items-start gap-2">
-                    <span class="text-orange-500 text-sm">⚠️</span>
-                    <p class="text-[11px] text-orange-200/80 leading-tight">
+                <!-- Telegram identity -->
+                <div class="bg-inputBg rounded-xl p-3 flex justify-between items-center gap-3">
+                    <span class="profile-label">Telegram ID</span>
+                    <span id="tg-id-display" class="profile-value font-mono text-orange-400">Не получен</span>
+                </div>
+                <div class="bg-inputBg rounded-xl p-3 flex justify-between items-center gap-3">
+                    <span class="profile-label">Telegram ник</span>
+                    <span id="tg-username-display" class="profile-value text-cyan-400">@не указан</span>
+                </div>
+
+                <!-- Nickname Status -->
+                <div class="bg-inputBg rounded-xl p-3 flex justify-between items-center">
+                    <span class="text-xs font-bold text-subText uppercase tracking-wider">Игровой ник</span>
+                    <span id="nick-status" class="text-xs font-black uppercase text-red-500 tracking-wider">Не привязан</span>
+                </div>
+
+                <!-- Notice -->
+                <div class="text-center px-2">
+                    <p class="text-[11px] text-subText leading-tight">
+                        <i class="fa-solid fa-triangle-exclamation text-accentOrange mr-1"></i>
+                        <span class="font-bold text-accentOrange">ОБРАТИТЕ ВНИМАНИЕ</span><br>
                         Никнейм устанавливается только 1 раз и изменить его больше не получится.
                     </p>
                 </div>
 
-                <div id="bind-section" class="space-y-2">
-                    <input type="text" id="mc-nick-input" placeholder="Введи свой ник в игре" class="w-full bg-zinc-900/90 border border-zinc-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-orange-500 transition">
-                    <button onclick="bindAccount()" class="w-full btn-orange text-white font-bold py-2.5 rounded-xl text-sm shadow-md">
-                        ПРИВЯЗАТЬ АККАУНТ
+                <!-- Nickname Input -->
+                <div id="nick-input-container" class="space-y-3">
+                    <input type="text" id="mc-nickname" placeholder="Введи свой ник в игре" 
+                           class="w-full bg-inputBg border border-neutral-700/60 rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-accentOrange transition-colors">
+                    
+                    <button onclick="linkAccount()" class="w-full orange-btn py-3.5 rounded-xl font-black heading-font text-white uppercase text-sm tracking-wider">
+                        Привязать аккаунт
                     </button>
                 </div>
             </div>
 
-            <!-- Блок рефералов -->
-            <div class="glass-card rounded-2xl p-4 space-y-3 shadow-xl">
-                <h3 class="text-orange-500 font-black text-sm tracking-wider flex items-center gap-2">
-                    <span>👥</span> РЕФЕРАЛЫ
-                </h3>
-                <div class="grid grid-cols-2 gap-2">
-                    <div class="bg-zinc-900/90 border border-zinc-800/80 rounded-xl p-3 text-center">
-                        <div class="text-[10px] text-zinc-400 uppercase">Приглашено</div>
-                        <div id="ref-count" class="text-lg font-black text-white">0</div>
-                    </div>
-                    <div class="bg-zinc-900/90 border border-zinc-800/80 rounded-xl p-3 text-center">
-                        <div class="text-[10px] text-zinc-400 uppercase">Заработано</div>
-                        <div class="text-lg font-black text-orange-400">0</div>
-                    </div>
+            <!-- REFERRALS SECTION -->
+            <div class="card-gradient rounded-2xl p-5 space-y-3">
+                <div class="flex items-center gap-2 text-accentOrange">
+                    <i class="fa-solid fa-users text-lg"></i>
+                    <h2 class="text-base font-black heading-font uppercase text-white tracking-wider">Рефералы</h2>
                 </div>
-                <div class="flex items-center gap-2 bg-zinc-900/90 border border-zinc-800/80 rounded-xl px-3 py-2">
-                    <input type="text" id="ref-link" readonly class="bg-transparent text-xs text-zinc-400 w-full focus:outline-none font-mono" value="https://t.me/bot?start=ref">
-                    <button onclick="copyRefLink()" class="bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 p-1.5 rounded-lg transition">
-                        📋
+
+                <div class="bg-inputBg rounded-xl p-3 flex justify-between items-center">
+                    <span class="text-xs font-bold text-subText uppercase tracking-wider">Приглашено</span>
+                    <span id="ref-count" class="text-sm font-black text-white">0</span>
+                </div>
+
+                <div class="bg-inputBg rounded-xl p-3 flex justify-between items-center">
+                    <span class="text-xs font-bold text-subText uppercase tracking-wider">Заработано</span>
+                    <span id="ref-earned" class="text-sm font-black text-white">0</span>
+                </div>
+
+                <!-- Referral Link Input & Copy -->
+                <div class="relative flex items-center mt-2">
+                    <input type="text" id="ref-link" readonly value="https://t.me/JuiceGriefTG?start=123456789" 
+                           class="w-full bg-inputBg border border-neutral-700/60 rounded-xl pl-4 pr-12 py-3 text-xs text-neutral-400 font-mono truncate focus:outline-none">
+                    <button onclick="copyRefLink()" class="absolute right-2 text-neutral-400 hover:text-white p-2">
+                        <i class="fa-regular fa-copy text-base"></i>
                     </button>
                 </div>
-                <p class="text-[10px] text-zinc-500 text-center">🎁 Получите бонус за каждого друга!</p>
+
+                <p class="text-center text-[11px] text-subText pt-1 flex items-center justify-center gap-1">
+                    <i class="fa-solid fa-gift text-xs"></i> Получите бонусы за каждого друга!
+                </p>
             </div>
 
-            <!-- Блок Поддержки -->
-            <div class="glass-card rounded-2xl p-4 space-y-3 shadow-xl">
-                <h3 class="text-orange-500 font-black text-sm tracking-wider flex items-center gap-2">
-                    <span>🎧</span> ПОДДЕРЖКА
-                </h3>
-                <p class="text-xs text-zinc-400 leading-tight">Нашли ошибку или есть вопросы? Напишите нам!</p>
-                <a href="https://dsc.gg/juicegrief" target="_blank" class="block w-full text-center btn-orange text-white font-bold py-2.5 rounded-xl text-sm shadow-md">
-                    СВЯЗАТЬСЯ С ПОДДЕРЖКОЙ
-                </a>
+            <!-- SUPPORT SECTION -->
+            <div class="card-gradient rounded-2xl p-5 space-y-3">
+                <div class="flex items-center gap-2 text-accentOrange">
+                    <i class="fa-solid fa-headset text-lg"></i>
+                    <h2 class="text-base font-black heading-font uppercase text-white tracking-wider">Поддержка</h2>
+                </div>
+
+                <p class="text-xs text-subText leading-relaxed">
+                    Нашли ошибку или есть вопросы? Напишите нам!
+                </p>
+
+                <button onclick="openSupport()" class="w-full orange-btn py-3.5 rounded-xl font-black heading-font text-white uppercase text-sm tracking-wider">
+                    Связаться с поддержкой
+                </button>
             </div>
+
         </div>
 
-    </div>
+    </main>
 
-    <!-- МОДАЛЬНОЕ ОКНО ЗАДАНИЯ (Проверка подписки) -->
-    <div id="task-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
-        <div class="glass-card border border-orange-500/30 rounded-3xl p-5 max-w-sm w-full space-y-4 shadow-2xl relative">
-            <button onclick="closeModal()" class="absolute top-4 right-4 text-zinc-400 hover:text-white text-lg font-bold">✕</button>
+    <!-- ==================== BOTTOM NAVIGATION BAR ==================== -->
+    <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#121318]/95 backdrop-blur-xl border-t border-neutral-800/80 px-6 py-3.5 z-30 shadow-[0_-10px_35px_rgba(0,0,0,.25)]">
+        <div class="flex justify-around items-center">
             
+            <button id="nav-home" onclick="switchTab('home')" class="flex flex-col items-center gap-1 text-accentOrange transition-colors">
+                <i class="fa-solid fa-house text-xl"></i>
+                <span class="text-[10px] font-bold uppercase tracking-wider">Главная</span>
+            </button>
+
+            <button id="nav-profile" onclick="switchTab('profile')" class="flex flex-col items-center gap-1 text-subText hover:text-white transition-colors">
+                <i class="fa-solid fa-user text-xl"></i>
+                <span class="text-[10px] font-bold uppercase tracking-wider">Профиль</span>
+            </button>
+
+        </div>
+    </nav>
+
+    <!-- ==================== TASKS MODAL (JuiceGriefTG Check ONLY) ==================== -->
+    <div id="tasks-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden transition-opacity duration-300">
+        <div class="bg-[#14151a] border border-neutral-800 w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 space-y-5 transform transition-transform duration-300 relative">
+            
+            <div class="w-12 h-1 bg-neutral-700 rounded-full mx-auto -mt-2 mb-2"></div>
+
+            <!-- Modal Header -->
             <div class="space-y-1">
-                <h3 class="font-black text-base text-white">Проверка подписки</h3>
-                <p class="text-xs text-zinc-400">Подпишитесь на канал для получения награды</p>
-            </div>
-
-            <!-- Канал подписки -->
-            <div class="bg-zinc-900/90 border border-zinc-800 rounded-xl p-3 flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-full bg-sky-500/20 flex items-center justify-center text-sky-400">
-                        ✈️
+                    <div class="w-9 h-9 rounded-full bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-accentOrange">
+                        <i class="fa-solid fa-circle-check text-lg"></i>
                     </div>
-                    <div>
-                        <div class="text-xs font-bold text-white">Канал проекта</div>
-                        <div class="text-[11px] text-sky-400 font-mono">@JuiceGriefTG</div>
-                    </div>
+                    <h3 id="modal-title" class="text-base font-black heading-font text-white leading-snug">
+                        Выполни задание для получения награды
+                    </h3>
                 </div>
-                <!-- Индикатор статуса подписки -->
-                <div id="sub-status-icon" class="w-6 h-6 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center text-xs font-bold">
-                    ✕
+                <p class="text-xs text-subText pl-12">
+                    Подпишитесь на наш официальный канал для продолжения
+                </p>
+            </div>
+
+            <!-- Single Channel Sub Task: @JuiceGriefTG -->
+            <div class="space-y-3">
+                <div class="bg-inputBg border border-neutral-800 rounded-xl p-4 flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-cyan-500 flex items-center justify-center text-white">
+                            <i class="fa-brands fa-telegram text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-white">Подпишись на канал</p>
+                            <a href="https://t.me/JuiceGriefTG" target="_blank" rel="noopener noreferrer" onclick="openChannelLink(); return false;" class="text-xs text-cyan-400 font-mono hover:underline">@JuiceGriefTG</a>
+                        </div>
+                    </div>
+                    <button onclick="toggleChannelSub()" id="ch-sub-btn" class="w-8 h-8 rounded-full bg-red-500/20 text-red-500 border border-red-500/40 flex items-center justify-center transition-colors">
+                        <i id="ch-sub-icon" class="fa-solid fa-xmark text-sm"></i>
+                    </button>
                 </div>
             </div>
 
-            <button onclick="checkSubscription()" id="check-sub-btn" class="w-full btn-orange text-white font-bold py-3 rounded-xl text-sm shadow-md flex items-center justify-center gap-2">
+            <!-- Action Button -->
+            <button onclick="verifyAndClaim()" class="w-full orange-btn py-4 rounded-xl font-black heading-font text-white uppercase text-sm tracking-wider">
                 Проверить подписку
+            </button>
+            
+            <button onclick="closeTasksModal()" class="w-full text-center text-xs text-subText hover:text-white py-1">
+                Закрыть
             </button>
         </div>
     </div>
 
-    <!-- НИЖНЯЯ НАВИГАЦИЯ (Закругленная с размытием) -->
-    <div class="fixed bottom-4 left-4 right-4 max-w-md mx-auto bg-zinc-900/85 backdrop-blur-xl border border-orange-500/20 rounded-2xl p-2 flex justify-around items-center shadow-2xl z-40">
-        <button onclick="switchTab('home')" id="nav-home" class="flex flex-col items-center py-1.5 px-6 rounded-xl transition text-orange-500">
-            <svg class="w-5 h-5 mb-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-            <span class="text-[10px] font-bold tracking-wider">ГЛАВНАЯ</span>
-        </button>
-        <button onclick="switchTab('profile')" id="nav-profile" class="flex flex-col items-center py-1.5 px-6 rounded-xl transition text-zinc-500 hover:text-zinc-300">
-            <svg class="w-5 h-5 mb-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-            <span class="text-[10px] font-bold tracking-wider">ПРОФИЛЬ</span>
-        </button>
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 max-w-xs w-full bg-neutral-900 border border-neutral-700 text-white px-4 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-3 transform -translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <i id="toast-icon" class="fa-solid fa-circle-info text-accentOrange text-lg"></i>
+        <span id="toast-msg" class="text-xs font-medium">Уведомление</span>
     </div>
 
+    <!-- APPLICATION LOGIC SCRIPT -->
     <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
+        const tg = window.Telegram?.WebApp;
+        if (tg) {
+            tg.ready();
+            tg.expand();
+        }
 
-        let userData = {
-            id: 123456789,
-            first_name: "Игрок",
-            photo_url: ""
+        const state = {
+            telegramUser: tg?.initDataUnsafe?.user || null,
+            tgId: tg?.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : '',
+            tgUsername: tg?.initDataUnsafe?.user?.username
+                ? '@' + tg.initDataUnsafe.user.username
+                : 'username не указан',
+            userName: tg?.initDataUnsafe?.user
+                ? ([tg.initDataUnsafe.user.first_name, tg.initDataUnsafe.user.last_name].filter(Boolean).join(' ').trim()
+                    || tg.initDataUnsafe.user.username
+                    || 'Игрок')
+                : 'Откройте через Telegram',
+            photoUrl: tg?.initDataUnsafe?.user?.photo_url || null,
+            storagePrefix: tg?.initDataUnsafe?.user?.id ? `juicegrief_${tg.initDataUnsafe.user.id}_` : 'juicegrief_guest_',
+            nickname: '',
+            claimedPegas: false,
+            lastDailyClaim: 0,
+            isSubscribedJuiceGrief: false,
+            currentRewardType: 'daily'
         };
 
-        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-            userData = tg.initDataUnsafe.user;
-        }
+        document.addEventListener('DOMContentLoaded', () => {
+            // Display Real TG ID, User Name & Photo
+            document.getElementById('user-name').innerText = state.userName;
+            document.getElementById('tg-id-display').innerText = state.tgId || 'Недоступен';
+            document.getElementById('tg-username').innerText = state.tgUsername;
+            document.getElementById('tg-username-display').innerText = state.tgUsername;
+            document.getElementById('ref-link').value = state.tgId
+                ? `https://t.me/JuiceGriefTG?start=${state.tgId}`
+                : 'Откройте приложение через Telegram';
 
-        document.getElementById('user-name').innerText = userData.first_name;
-        document.getElementById('profile-tg-id').innerText = userData.id;
-        document.getElementById('ref-link').value = `https://t.me/JuiceGriefBot?start=${userData.id}`;
+            state.nickname = localStorage.getItem(state.storagePrefix + 'mc_nickname') || '';
+            state.claimedPegas = localStorage.getItem(state.storagePrefix + 'claimed_pegas') === 'true';
+            state.lastDailyClaim = parseInt(localStorage.getItem(state.storagePrefix + 'last_daily_claim') || '0', 10);
 
-        if (userData.photo_url) {
-            document.getElementById('user-avatar-container').innerHTML = `<img src="${userData.photo_url}" class="w-full h-full object-cover">`;
-        } else {
-            document.getElementById('user-initial').innerText = userData.first_name.charAt(0).toUpperCase();
-        }
+            const userPhotoImg = document.getElementById('user-photo');
+            const avatarInitial = document.getElementById('avatar-initial');
 
-        function switchTab(tab) {
+            if (state.photoUrl) {
+                userPhotoImg.src = state.photoUrl;
+                userPhotoImg.referrerPolicy = 'no-referrer';
+                userPhotoImg.classList.remove('hidden');
+                avatarInitial.classList.add('hidden');
+            } else {
+                avatarInitial.innerText = state.telegramUser
+                    ? (state.userName.charAt(0).toUpperCase() || 'J')
+                    : 'J';
+            }
+
+            if (!state.telegramUser) {
+                showToast('Откройте Mini App из Telegram, чтобы загрузить ваш профиль.', 'info');
+            }
+
+            if (state.nickname) {
+                renderLinkedState();
+            }
+        });
+
+        function switchTab(tabName) {
             const homeTab = document.getElementById('tab-home');
             const profileTab = document.getElementById('tab-profile');
             const navHome = document.getElementById('nav-home');
             const navProfile = document.getElementById('nav-profile');
 
-            if (tab === 'home') {
+            if (tabName === 'home') {
                 homeTab.classList.remove('hidden');
                 profileTab.classList.add('hidden');
-                navHome.className = "flex flex-col items-center py-1.5 px-6 rounded-xl transition text-orange-500";
-                navProfile.className = "flex flex-col items-center py-1.5 px-6 rounded-xl transition text-zinc-500 hover:text-zinc-300";
+                navHome.className = 'flex flex-col items-center gap-1 text-accentOrange transition-colors';
+                navProfile.className = 'flex flex-col items-center gap-1 text-subText hover:text-white transition-colors';
             } else {
                 homeTab.classList.add('hidden');
                 profileTab.classList.remove('hidden');
-                navProfile.className = "flex flex-col items-center py-1.5 px-6 rounded-xl transition text-orange-500";
-                navHome.className = "flex flex-col items-center py-1.5 px-6 rounded-xl transition text-zinc-500 hover:text-zinc-300";
+                navHome.className = 'flex flex-col items-center gap-1 text-subText hover:text-white transition-colors';
+                navProfile.className = 'flex flex-col items-center gap-1 text-accentOrange transition-colors';
             }
         }
 
-        function openModal() {
-            document.getElementById('task-modal').classList.remove('hidden');
-            resetSubStatus();
-        }
+        function linkAccount() {
+            if (!state.tgId) {
+                showToast('Откройте приложение через Telegram, чтобы привязать аккаунт.', 'error');
+                return;
+            }
+            const nickInput = document.getElementById('mc-nickname');
+            const nick = nickInput.value.trim();
 
-        function closeModal() {
-            document.getElementById('task-modal').classList.add('hidden');
-        }
-
-        function resetSubStatus() {
-            const icon = document.getElementById('sub-status-icon');
-            icon.className = "w-6 h-6 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center text-xs font-bold";
-            icon.innerHTML = "✕";
-            document.getElementById('check-sub-btn').innerText = "Проверить подписку";
-            document.getElementById('check-sub-btn').disabled = false;
-        }
-
-        function checkSubscription() {
-            const btn = document.getElementById('check-sub-btn');
-            const icon = document.getElementById('sub-status-icon');
-            
-            btn.innerText = "Проверяем...";
-            btn.disabled = true;
-
-            setTimeout(() => {
-                const isSubscribed = true; // Замените на реальную проверку бэкенда
-
-                if (isSubscribed) {
-                    icon.className = "w-6 h-6 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center text-xs font-bold";
-                    icon.innerHTML = "✓";
-                    btn.innerText = "Успешно! Награда выдана 🎉";
-                    
-                    setTimeout(() => {
-                        closeModal();
-                        alert("Ежедневный бонус успешно отправлен в игру!");
-                    }, 1000);
-                } else {
-                    icon.className = "w-6 h-6 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center text-xs font-bold";
-                    icon.innerHTML = "✕";
-                    btn.innerText = "Подпишитесь на канал!";
-                    btn.disabled = false;
-                }
-            }, 1200);
-        }
-
-        function claimPegas() {
-            alert("Запрос на получение привилегии PEGAS отправлен!");
-        }
-
-        function bindAccount() {
-            const input = document.getElementById('mc-nick-input');
-            const nick = input.value.trim();
-
-            if (nick.length < 3) {
-                alert("Введите корректный никнейм!");
+            if (!nick) {
+                showToast('Введите никнейм!', 'error');
                 return;
             }
 
-            localStorage.setItem('mc_nick_' + userData.id, nick);
-            updateProfileState(nick);
-            alert("Никнейм успешно привязан!");
+            const regex = /^[a-zA-Z0-9_]{3,16}$/;
+            if (!regex.test(nick)) {
+                showToast('Ник содержит ошибки! (3-16 символов)', 'error');
+                return;
+            }
+
+            state.nickname = nick;
+            localStorage.setItem(state.storagePrefix + 'mc_nickname', nick);
+            renderLinkedState();
+            showToast('Аккаунт успешно привязан!', 'success');
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
-            const savedNick = localStorage.getItem('mc_nick_' + userData.id);
-            if (savedNick) {
-                updateProfileState(savedNick);
+        function renderLinkedState() {
+            const statusEl = document.getElementById('nick-status');
+            statusEl.innerText = state.nickname;
+            statusEl.className = 'text-xs font-black uppercase text-green-400 tracking-wider';
+
+            const container = document.getElementById('nick-input-container');
+            container.innerHTML = `
+                <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 text-center">
+                    <p class="text-xs text-emerald-400 font-bold">
+                        <i class="fa-solid fa-circle-check mr-1"></i> Привязан к ${state.nickname}
+                    </p>
+                </div>
+            `;
+        }
+
+        function openTasksModal(type) {
+            if (!state.tgId) {
+                showToast('Откройте приложение через Telegram.', 'error');
+                return;
             }
-        });
+            if (!state.nickname) {
+                showToast('Сначала привяжите ник в профиле!', 'error');
+                switchTab('profile');
+                return;
+            }
 
-        function updateProfileState(nick) {
-            const statusDiv = document.getElementById('profile-mc-status');
-            const bindSection = document.getElementById('bind-section');
+            state.currentRewardType = type;
 
-            statusDiv.innerText = nick.toUpperCase();
-            bindSection.innerHTML = `<div class="text-xs text-green-400 font-bold text-center py-2">✓ Аккаунт успешно привязан</div>`;
+            if (type === 'pegas' && state.claimedPegas) {
+                showToast('Вы уже получали донат Pegas!', 'info');
+                return;
+            }
+
+            const modalTitle = document.getElementById('modal-title');
+            if (type === 'pegas') {
+                modalTitle.innerText = 'Подпишись для получения Доната PEGAS';
+            } else {
+                modalTitle.innerText = 'Подпишись для получения Ежедневного бонуса';
+            }
+
+            document.getElementById('tasks-modal').classList.remove('hidden');
+        }
+
+        function closeTasksModal() {
+            document.getElementById('tasks-modal').classList.add('hidden');
+        }
+
+        function openChannelLink() {
+            if (tg && tg.openTelegramLink) {
+                tg.openTelegramLink('https://t.me/JuiceGriefTG');
+            } else {
+                window.open('https://t.me/JuiceGriefTG', '_blank');
+            }
+        }
+
+        function toggleChannelSub() {
+            state.isSubscribedJuiceGrief = !state.isSubscribedJuiceGrief;
+            const btn = document.getElementById('ch-sub-btn');
+            const icon = document.getElementById('ch-sub-icon');
+
+            if (state.isSubscribedJuiceGrief) {
+                btn.className = 'w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center transition-colors';
+                icon.className = 'fa-solid fa-check text-sm';
+            } else {
+                btn.className = 'w-8 h-8 rounded-full bg-red-500/20 text-red-500 border border-red-500/40 flex items-center justify-center transition-colors';
+                icon.className = 'fa-solid fa-xmark text-sm';
+            }
+        }
+
+        function verifyAndClaim() {
+            // Dynamic check simulation for @JuiceGriefTG
+            if (!state.isSubscribedJuiceGrief) {
+                showToast('Вы отписаны или не подписались на @JuiceGriefTG!', 'error');
+                return;
+            }
+
+            if (state.currentRewardType === 'pegas') {
+                if (state.claimedPegas) {
+                    showToast('Вы уже получили этот донат!', 'info');
+                    closeTasksModal();
+                    return;
+                }
+                state.claimedPegas = true;
+                localStorage.setItem(state.storagePrefix + 'claimed_pegas', 'true');
+                closeTasksModal();
+                showToast('🎉 Донат PEGAS успешно выдан игроку ' + state.nickname + '!', 'success');
+            } else {
+                const now = Date.now();
+                const cooldown = 24 * 60 * 60 * 1000;
+
+                if (now - state.lastDailyClaim < cooldown) {
+                    const remaining = cooldown - (now - state.lastDailyClaim);
+                    const hours = Math.floor(remaining / (1000 * 60 * 60));
+                    const mins = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+                    showToast(`Следующая награда через ${hours}ч ${mins}м`, 'info');
+                    closeTasksModal();
+                    return;
+                }
+
+                state.lastDailyClaim = now;
+                localStorage.setItem(state.storagePrefix + 'last_daily_claim', now.toString());
+                closeTasksModal();
+                showToast('🎁 Ежедневный бонус выдан!', 'success');
+            }
         }
 
         function copyRefLink() {
-            const linkInput = document.getElementById('ref-link');
-            linkInput.select();
-            navigator.clipboard.writeText(linkInput.value);
-            alert("Реферальная ссылка скопирована!");
+            const copyText = document.getElementById("ref-link");
+            copyText.select();
+            document.execCommand("copy");
+            showToast('Ссылка скопирована!', 'success');
+        }
+
+        function openSupport() {
+            const supportUrl = 'https://dsc.gg/juicegrief';
+            if (tg?.openLink) {
+                tg.openLink(supportUrl);
+            } else {
+                window.open(supportUrl, '_blank', 'noopener,noreferrer');
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const msgEl = document.getElementById('toast-msg');
+            const iconEl = document.getElementById('toast-icon');
+
+            msgEl.innerText = message;
+
+            if (type === 'success') {
+                iconEl.className = 'fa-solid fa-circle-check text-emerald-400 text-lg';
+            } else if (type === 'error') {
+                iconEl.className = 'fa-solid fa-circle-exclamation text-red-500 text-lg';
+            } else {
+                iconEl.className = 'fa-solid fa-circle-info text-accentOrange text-lg';
+            }
+
+            toast.classList.remove('-translate-y-20', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('-translate-y-20', 'opacity-0', 'pointer-events-none');
+            }, 3000);
         }
     </script>
 </body>
