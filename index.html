@@ -226,7 +226,7 @@
                     <p class="text-[11px] text-subText leading-tight">
                         <i class="fa-solid fa-triangle-exclamation text-accentOrange mr-1"></i>
                         <span class="font-bold text-accentOrange">ОБРАТИТЕ ВНИМАНИЕ</span><br>
-                        Никнейм устанавливается только 1 раз и изменить его больше не получится.
+                        Никнейм привязывается к вашему Telegram ID навсегда и изменить его нельзя.
                     </p>
                 </div>
 
@@ -357,7 +357,7 @@
             isVerified: false
         };
 
-        // Обработка параметра startapp от бота (если подписка подтверждена)
+        // Обработка возврата из бота после проверки подписки
         const startParam = tg?.initDataUnsafe?.start_param || '';
         if (startParam.startsWith('subscribed')) {
             state.isVerified = true;
@@ -382,19 +382,36 @@
                 initial.innerText = state.userName.charAt(0).toUpperCase() || 'J';
             }
 
-            state.nickname = localStorage.getItem('juicegrief_mc_nickname') || '';
-            if (state.nickname) renderLinkedState();
+            loadLocalBinding();
 
             if (state.tgId) {
                 document.getElementById('ref-link').value = `https://t.me/${BOT_USERNAME}?start=${state.tgId}`;
             }
 
             if (state.isVerified) {
-                showToast('Подписка успешно подтверждена!', 'success');
+                showToast('Подписка подтверждена! Нажмите "Получить бонус".', 'success');
             }
 
             checkCooldowns();
         });
+
+        function loadLocalBinding() {
+            const savedNick = localStorage.getItem('juicegrief_mc_nickname');
+            const savedTgId = localStorage.getItem('juicegrief_tg_id');
+
+            // Защита: если зашли с другого телеграм аккаунта
+            if (savedTgId && savedTgId !== state.tgId) {
+                localStorage.removeItem('juicegrief_mc_nickname');
+                localStorage.removeItem('juicegrief_tg_id');
+                state.nickname = '';
+                return;
+            }
+
+            if (savedNick) {
+                state.nickname = savedNick;
+                renderLinkedState();
+            }
+        }
 
         function toggleTelegramId() {
             const id = document.getElementById('tg-id-display');
@@ -420,14 +437,31 @@
         }
 
         function linkAccount() {
-            if (!state.tgId) return showToast('Откройте приложение через Telegram.', 'error');
+            if (!state.tgId) return showToast('Ошибка: откройте приложение через Telegram.', 'error');
+            
+            // Если ник уже привязан к этому ID — выводим ошибку что повторно нельзя
+            if (state.nickname) {
+                return showToast('❌ Этот аккаунт уже привязан к нику "' + state.nickname + '". Изменять его нельзя!', 'error');
+            }
+
             const nick = document.getElementById('mc-nickname').value.trim();
-            if (!/^[a-zA-Z0-9_]{3,16}$/.test(nick)) return showToast('Ник должен содержать 3–16 символов (латиница, цифры, _).', 'error');
+            if (!/^[a-zA-Z0-9_]{3,16}$/.test(nick)) {
+                return showToast('❌ Ник должен содержать 3–16 символов (латиница, цифры, _).', 'error');
+            }
+
+            // Проверка: занят ли этот ник другим Telegram ID на этом клиенте
+            const existingOwner = localStorage.getItem('juicegrief_nick_owner_' + nick);
+            if (existingOwner && existingOwner !== state.tgId) {
+                return showToast('❌ Ошибка: Этот игровой ник уже привязан к другому Telegram ID!', 'error');
+            }
             
             state.nickname = nick;
             localStorage.setItem('juicegrief_mc_nickname', nick);
+            localStorage.setItem('juicegrief_tg_id', state.tgId);
+            localStorage.setItem('juicegrief_nick_owner_' + nick, state.tgId);
+
             renderLinkedState();
-            showToast('Игровой ник успешно сохранён!', 'success');
+            showToast('✅ Игровой ник успешно привязан!', 'success');
         }
 
         function renderLinkedState() {
@@ -445,13 +479,17 @@
         }
 
         function openTasksModal(type) {
-            if (!state.tgId) return showToast('Откройте приложение через Telegram.', 'error');
-            if (!state.nickname) { showToast('Сначала привяжите ник в профиле!', 'error'); switchTab('profile'); return; }
+            if (!state.tgId) return showToast('Ошибка: откройте приложение через Telegram.', 'error');
+            if (!state.nickname) { 
+                showToast('❌ Сначала привяжите свой ник в профиле!', 'error'); 
+                switchTab('profile'); 
+                return; 
+            }
             
             if (type === 'daily') {
                 const lastClaim = localStorage.getItem('juicegrief_daily_cd');
                 if (lastClaim && Date.now() - parseInt(lastClaim) < 86400000) {
-                    showToast('Ежедневный бонус уже получен! Ждите таймер.', 'error');
+                    showToast('⏳ Ежедневный бонус уже получен! Ждите таймер.', 'error');
                     return;
                 }
             }
@@ -459,7 +497,7 @@
             if (type === 'pegas') {
                 const claimedPegas = localStorage.getItem('juicegrief_pegas_claimed');
                 if (claimedPegas) {
-                    showToast('Донат PEGAS уже был получен!', 'error');
+                    showToast('⚠️ Донат PEGAS уже был получен ранее!', 'error');
                     return;
                 }
             }
@@ -473,7 +511,7 @@
             if (state.isVerified) {
                 iconBox.className = 'w-7 h-7 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-xs';
                 iconBox.innerHTML = '<i class="fa-solid fa-check"></i>';
-                btn.innerText = 'ПОЛУЧИТЬ БОНУС';
+                btn.innerText = 'ПОЛУЧИТЬ НАГРАДУ';
             } else {
                 iconBox.className = 'w-7 h-7 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-500 font-bold text-xs';
                 iconBox.innerHTML = '<i class="fa-solid fa-xmark"></i>';
@@ -501,12 +539,12 @@
                     type: state.currentRewardType
                 };
                 try {
-                    if (!tg?.sendData) throw new Error('sendData недоступен. Откройте MiniApp через кнопку в боте.');
+                    if (!tg?.sendData) throw new Error('sendData недоступен. Откройте Mini App через кнопку бота.');
                     tg.sendData(JSON.stringify(payload));
                 } catch (err) {
                     console.error('sendData error:', err);
                     btn.innerText = 'Проверить подписку';
-                    showToast(err.message, 'error');
+                    showToast('❌ ' + err.message, 'error');
                 }
                 return;
             }
@@ -519,11 +557,11 @@
             };
 
             try {
-                if (!tg?.sendData) throw new Error('sendData недоступен. Откройте MiniApp через кнопку в боте.');
+                if (!tg?.sendData) throw new Error('sendData недоступен.');
                 tg.sendData(JSON.stringify(payload));
             } catch (err) {
                 console.error('sendData error:', err);
-                showToast(err.message, 'error');
+                showToast('❌ ' + err.message, 'error');
                 return;
             }
 
@@ -536,7 +574,7 @@
             }
 
             closeTasksModal();
-            showToast('Награда успешно запрошена!', 'success');
+            showToast('✅ Награда успешно запрошена!', 'success');
         }
 
         function startDailyTimer() {
@@ -579,8 +617,8 @@
             const value = document.getElementById('ref-link').value;
             try {
                 if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(value);
-                showToast('Реферальная ссылка скопирована!', 'success');
-            } catch { showToast('Не удалось скопировать.', 'error'); }
+                showToast('✅ Реферальная ссылка скопирована!', 'success');
+            } catch { showToast('❌ Не удалось скопировать.', 'error'); }
         }
 
         function openSupport() {
@@ -602,7 +640,7 @@
             setTimeout(() => {
                 toast.classList.remove('translate-y-0', 'opacity-100');
                 toast.classList.add('-translate-y-20', 'opacity-0', 'pointer-events-none');
-            }, 3000);
+            }, 3500);
         }
     </script>
 </body>
