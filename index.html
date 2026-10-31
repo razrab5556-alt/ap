@@ -355,7 +355,7 @@
                 return await r.json();
             } catch (e) {
                 console.error('API error:', e);
-                return { ok: false, message: '❌ Нет связи: ' + e.message };
+                return { ok: false, message: 'Нет связи с сервером: ' + e.message };
             }
         }
 
@@ -420,10 +420,10 @@
 
         async function linkAccount() {
             if (!state.tgId) return showToast('Ошибка: откройте приложение через Telegram.', 'error');
-            if (state.nickname) return showToast('❌ Аккаунт уже привязан к нику "' + state.nickname + '". Изменять нельзя!', 'error');
+            if (state.nickname) return showToast('Аккаунт уже привязан к нику "' + state.nickname + '". Изменять нельзя!', 'error');
             const nick = document.getElementById('mc-nickname').value.trim();
             if (!/^[a-zA-Z0-9_]{3,16}$/.test(nick)) {
-                return showToast('❌ Ник должен содержать 3–16 символов (латиница, цифры, _).', 'error');
+                return showToast('Ник должен содержать 3–16 символов (латиница, цифры, _).', 'error');
             }
             if (busy) return;
             busy = true;
@@ -450,15 +450,15 @@
         function openTasksModal(type) {
             if (!state.tgId) return showToast('Ошибка: откройте приложение через Telegram.', 'error');
             if (!state.nickname) {
-                showToast('❌ Сначала привяжите свой ник в профиле!', 'error');
+                showToast('Сначала привяжите свой ник в профиле!', 'error');
                 switchTab('profile');
                 return;
             }
             if (type === 'daily' && state.dailyLast && Date.now() - state.dailyLast < DAY) {
-                return showToast('⏳ Ежедневный бонус уже получен! Ждите таймер.', 'error');
+                return showToast('Ежедневный бонус уже получен! Подождите ', 'error');
             }
             if (type === 'pegas' && state.pegasClaimed) {
-                return showToast('⚠️ Донат PEGAS уже был получен ранее!', 'error');
+                return showToast('Донат PEGAS уже был получен ранее! <span class="timer-value">00:00</span>', 'error');
             }
 
             state.currentRewardType = type;
@@ -519,8 +519,8 @@
             const value = document.getElementById('ref-link').value;
             try {
                 if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(value);
-                showToast('✅ Реферальная ссылка скопирована!', 'success');
-            } catch { showToast('❌ Не удалось скопировать.', 'error'); }
+                showToast('Реферальная ссылка скопирована!', 'success');
+            } catch { showToast('Не удалось скопировать.', 'error'); }
         }
 
         function openSupport() {
