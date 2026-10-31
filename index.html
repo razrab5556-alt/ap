@@ -286,19 +286,18 @@
             </div>
 
             <div class="space-y-3">
-                <div onclick="openChannelLink()" class="bg-inputBg border border-neutral-800 rounded-xl p-4 flex justify-between items-center cursor-pointer hover:border-neutral-700 transition-colors">
+                <div class="bg-inputBg border border-neutral-800 rounded-xl p-4 flex justify-between items-center">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-full bg-cyan-500 flex items-center justify-center text-white">
                             <i class="fa-brands fa-telegram text-xl"></i>
                         </div>
                         <div>
                             <p class="text-xs font-bold text-white">Подпишись на канал</p>
-                            <span class="text-xs text-cyan-400 font-mono">@JuiceGriefTG</span>
+                            <a href="https://t.me/JuiceGriefTG" target="_blank" rel="noopener noreferrer" onclick="openChannelLink(); return false;" class="text-xs text-cyan-400 font-mono hover:underline">@JuiceGriefTG</a>
                         </div>
                     </div>
-                    <div class="text-subText text-xs flex items-center gap-1">
-                        <span>Перейти</span>
-                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                    <div id="sub-status-icon" class="w-7 h-7 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-500 font-bold text-xs">
+                        <i class="fa-solid fa-xmark"></i>
                     </div>
                 </div>
             </div>
@@ -329,6 +328,7 @@
         const CHANNEL_URL = 'https://t.me/JuiceGriefTG';
         const DAY = 86400000;
 
+        // Начальное состояние из URL (если открыто кнопкой бота), затем обновляется с сервера
         const params = new URLSearchParams(location.search);
         const telegramUser = tg?.initDataUnsafe?.user || null;
         const state = {
@@ -354,8 +354,7 @@
                 });
                 return await r.json();
             } catch (e) {
-                console.error('API error:', e);
-                return { ok: false, message: 'Нет связи: ' + e.message };
+                return { ok: false, message: '❌ Нет связи с сервером. Попробуйте позже.' };
             }
         }
 
@@ -392,7 +391,7 @@
             }
             checkCooldowns();
 
-            api('state').then(r => { if (r && r.state) applyState(r.state); });
+            api('state').then(r => applyState(r.state));
         });
 
         function toggleTelegramId() {
@@ -420,28 +419,17 @@
 
         async function linkAccount() {
             if (!state.tgId) return showToast('Ошибка: откройте приложение через Telegram.', 'error');
-            if (state.nickname) return showToast('❌ Аккаунт уже привязан к нику "' + state.nickname + '".', 'error');
-            
-            const inputEl = document.getElementById('mc-nickname');
-            const nick = inputEl ? inputEl.value.trim() : '';
-
+            if (state.nickname) return showToast('❌ Аккаунт уже привязан к нику "' + state.nickname + '". Изменять нельзя!', 'error');
+            const nick = document.getElementById('mc-nickname').value.trim();
             if (!/^[a-zA-Z0-9_]{3,16}$/.test(nick)) {
                 return showToast('❌ Ник должен содержать 3–16 символов (латиница, цифры, _).', 'error');
             }
             if (busy) return;
             busy = true;
-
-            try {
-                const r = await api('link', { nickname: nick });
-                if (r && r.state) {
-                    applyState(r.state);
-                }
-                showToast(r.message, r.ok ? 'success' : 'error');
-            } catch (e) {
-                showToast('❌ Ошибка соединения.', 'error');
-            } finally {
-                busy = false;
-            }
+            const r = await api('link', { nickname: nick });
+            busy = false;
+            applyState(r.state);
+            showToast(r.message, r.ok ? 'success' : 'error');
         }
 
         function renderLinkedState() {
@@ -482,11 +470,8 @@
         function closeTasksModal() { document.getElementById('tasks-modal').classList.add('hidden'); }
 
         function openChannelLink() {
-            if (tg?.openTelegramLink) {
-                tg.openTelegramLink(CHANNEL_URL);
-            } else {
-                window.open(CHANNEL_URL, '_blank', 'noopener,noreferrer');
-            }
+            if (tg?.openTelegramLink) tg.openTelegramLink(CHANNEL_URL);
+            else window.open(CHANNEL_URL, '_blank', 'noopener,noreferrer');
         }
 
         async function handleModalAction() {
@@ -494,20 +479,12 @@
             busy = true;
             const btn = document.getElementById('modal-action-btn');
             btn.innerText = 'ПРОВЕРЯЕМ...';
-
-            try {
-                const r = await api('claim', { type: state.currentRewardType });
-                if (r && r.state) {
-                    applyState(r.state);
-                }
-                closeTasksModal();
-                showToast(r.message, r.ok ? 'success' : 'error');
-            } catch (e) {
-                showToast('❌ Ошибка выдачи награды.', 'error');
-            } finally {
-                busy = false;
-                btn.innerText = 'Получить награду';
-            }
+            const r = await api('claim', { type: state.currentRewardType });
+            busy = false;
+            btn.innerText = 'Получить награду';
+            applyState(r.state);
+            closeTasksModal();
+            showToast(r.message, r.ok ? 'success' : 'error');
         }
 
         function startDailyTimer() {
