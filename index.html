@@ -354,7 +354,8 @@
                 });
                 return await r.json();
             } catch (e) {
-                return { ok: false, message: '❌ Нет связи с сервером. Попробуйте позже.' };
+                console.error('API error:', e);
+                return { ok: false, message: '❌ Нет связи: ' + e.message };
             }
         }
 
