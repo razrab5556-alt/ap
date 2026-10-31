@@ -461,7 +461,7 @@
                 const m = String(Math.floor((diff / 60000) % 60)).padStart(2, '0');
                 const s = String(Math.floor((diff / 1000) % 60)).padStart(2, '0');
                 
-                return showToast(`Ежедневный бонус уже получен! <br>Подождите ${h}:${m}:${s}`, 'error');
+                return showToast(`Ежедневный бонус уже получен! <br>Подождите ${h} ч. ${m} мин. ${s} сек.`, 'error');
             }
             if (type === 'pegas' && state.pegasClaimed) {
                 return showToast('Донат PEGAS уже был получен ранее!', 'error');
