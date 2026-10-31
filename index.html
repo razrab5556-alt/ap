@@ -455,10 +455,10 @@
                 return;
             }
             if (type === 'daily' && state.dailyLast && Date.now() - state.dailyLast < DAY) {
-                return showToast('Ежедневный бонус уже получен! Подождите ', 'error');
+                return showToast('Ежедневный бонус уже получен! Подождите <span class="timer-value">00:00:00</span>', 'error');
             }
             if (type === 'pegas' && state.pegasClaimed) {
-                return showToast('Донат PEGAS уже был получен ранее! <span class="timer-value">00:00</span>', 'error');
+                return showToast('Донат PEGAS уже был получен ранее!', 'error');
             }
 
             state.currentRewardType = type;
