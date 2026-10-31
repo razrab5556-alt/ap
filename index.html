@@ -220,22 +220,35 @@
                 </div>
             </div>
 
-            <!-- REFERRALS -->
-            <div class="card-gradient rounded-2xl p-5 space-y-3">
-                <div class="flex items-center gap-2 text-accentOrange">
-                    <i class="fa-solid fa-users text-lg"></i>
-                    <h2 class="text-base font-black heading-font uppercase text-white tracking-wider">Рефералы</h2>
+            <!-- REFERRALS (ЗАБЛЮРЕНО) -->
+            <div class="card-gradient rounded-2xl p-5 space-y-3 relative overflow-hidden">
+                
+                <!-- Заблюренный контент -->
+                <div class="filter blur-[6px] pointer-events-none select-none opacity-40">
+                    <div class="flex items-center gap-2 text-accentOrange mb-3">
+                        <i class="fa-solid fa-users text-lg"></i>
+                        <h2 class="text-base font-black heading-font uppercase text-white tracking-wider">Рефералы</h2>
+                    </div>
+                    <div class="bg-inputBg rounded-xl p-3 flex justify-between items-center mb-3">
+                        <span class="text-xs font-bold text-subText uppercase tracking-wider">Приглашено</span>
+                        <span class="text-sm font-black text-white">0</span>
+                    </div>
+                    <div class="relative flex items-center mt-2">
+                        <input type="text" readonly value="https://t.me/JuiceGriefTG?start=123456789"
+                               class="w-full bg-inputBg border border-neutral-700/60 rounded-xl pl-4 pr-12 py-3 text-xs text-neutral-400 font-mono truncate focus:outline-none">
+                        <button class="absolute right-2 text-neutral-400 p-2">
+                            <i class="fa-regular fa-copy text-base"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="bg-inputBg rounded-xl p-3 flex justify-between items-center">
-                    <span class="text-xs font-bold text-subText uppercase tracking-wider">Приглашено</span>
-                    <span id="ref-count" class="text-sm font-black text-white">0</span>
-                </div>
-                <div class="relative flex items-center mt-2">
-                    <input type="text" id="ref-link" readonly value="https://t.me/JuiceGriefTG?start=123456789"
-                           class="w-full bg-inputBg border border-neutral-700/60 rounded-xl pl-4 pr-12 py-3 text-xs text-neutral-400 font-mono truncate focus:outline-none">
-                    <button onclick="copyRefLink()" class="absolute right-2 text-neutral-400 hover:text-white p-2">
-                        <i class="fa-regular fa-copy text-base"></i>
-                    </button>
+
+                <!-- Плашка "Скоро" -->
+                <div class="absolute inset-0 flex flex-col items-center justify-center bg-black/40 z-10">
+                    <div class="bg-neutral-800/90 border border-neutral-700 px-4 py-2 rounded-xl flex items-center gap-2 shadow-lg">
+                        <i class="fa-solid fa-lock text-accentOrange"></i>
+                        <span class="text-sm font-bold text-white uppercase tracking-wider">Пока недоступно</span>
+                    </div>
+                    <p class="text-[10px] text-neutral-400 mt-2 font-medium">Мы работаем над этим!</p>
                 </div>
             </div>
 
@@ -397,7 +410,6 @@
                 if (r && r.state) {
                     applyState(r.state);
                 } else {
-                    // Если сервер не ответил или вернул ошибку
                     showToast(r.message || 'Нет связи с сервером! Попробуйте позже.', 'error');
                 }
             }).catch(() => {
@@ -552,13 +564,9 @@
             const msgEl = document.getElementById('toast-msg');
             const iconEl = document.getElementById('toast-icon');
             
-            // Если сообщение от сервера - экранируем HTML, чтобы не было XSS.
-            // Если это наше локальное сообщение (с <br>), то выводим как есть.
-            if (message.includes('<br>')) {
-                msgEl.innerHTML = message;
-            } else {
-                msgEl.innerText = message;
-            }
+            // Безопасный вывод: разрешаем только тег <br>, остальное экранируем
+            const safeMessage = String(message).replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/&lt;br&gt;/g, '<br>');
+            msgEl.innerHTML = safeMessage;
 
             if (type === 'success') iconEl.className = 'fa-solid fa-circle-check text-emerald-400 text-lg';
             else if (type === 'error') iconEl.className = 'fa-solid fa-circle-exclamation text-red-500 text-lg';
