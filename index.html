@@ -454,8 +454,14 @@
                 switchTab('profile');
                 return;
             }
+            // ИСПРАВЛЕННЫЙ БЛОК: Подсчет времени в уведомлении
             if (type === 'daily' && state.dailyLast && Date.now() - state.dailyLast < DAY) {
-                return showToast('Ежедневный бонус уже получен! Подождите <span class="timer-value">00:00:00</span>', 'error');
+                const diff = DAY - (Date.now() - state.dailyLast);
+                const h = String(Math.floor(diff / 3600000)).padStart(2, '0');
+                const m = String(Math.floor((diff / 60000) % 60)).padStart(2, '0');
+                const s = String(Math.floor((diff / 1000) % 60)).padStart(2, '0');
+                
+                return showToast(`Ежедневный бонус уже получен! <br>Подождите ${h}:${m}:${s}`, 'error');
             }
             if (type === 'pegas' && state.pegasClaimed) {
                 return showToast('Донат PEGAS уже был получен ранее!', 'error');
@@ -529,12 +535,21 @@
             else window.open(url, '_blank', 'noopener,noreferrer');
         }
 
+        // ИСПРАВЛЕННЫЙ TOAST (теперь поддерживает HTML-теги и защищен от XSS)
         function showToast(message, type = 'info') {
             if (!message) return;
             const toast = document.getElementById('toast');
             const msgEl = document.getElementById('toast-msg');
             const iconEl = document.getElementById('toast-icon');
-            msgEl.innerText = message;
+            
+            // Если сообщение от сервера - экранируем HTML, чтобы не было XSS.
+            // Если это наше локальное сообщение (с <br>), то выводим как есть.
+            if (message.includes('<br>')) {
+                msgEl.innerHTML = message;
+            } else {
+                msgEl.innerText = message;
+            }
+
             if (type === 'success') iconEl.className = 'fa-solid fa-circle-check text-emerald-400 text-lg';
             else if (type === 'error') iconEl.className = 'fa-solid fa-circle-exclamation text-red-500 text-lg';
             else iconEl.className = 'fa-solid fa-circle-info text-accentOrange text-lg';
