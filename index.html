@@ -392,7 +392,17 @@
             }
             checkCooldowns();
 
-            api('state').then(r => applyState(r.state));
+            // Проверяем связь с сервером при запуске
+            api('state').then(r => {
+                if (r && r.state) {
+                    applyState(r.state);
+                } else {
+                    // Если сервер не ответил или вернул ошибку
+                    showToast(r.message || 'Нет связи с сервером! Попробуйте позже.', 'error');
+                }
+            }).catch(() => {
+                showToast('Нет связи с сервером! Попробуйте позже.', 'error');
+            });
         });
 
         function toggleTelegramId() {
