@@ -221,21 +221,35 @@
             </div>
 
             <!-- REFERRALS -->
-            <div class="card-gradient rounded-2xl p-5 space-y-3">
+            <!-- REFERRALS -->
+            <div class="card-gradient rounded-2xl p-5 space-y-3 relative overflow-hidden">
                 <div class="flex items-center gap-2 text-accentOrange">
                     <i class="fa-solid fa-users text-lg"></i>
                     <h2 class="text-base font-black heading-font uppercase text-white tracking-wider">Рефералы</h2>
                 </div>
-                <div class="bg-inputBg rounded-xl p-3 flex justify-between items-center">
-                    <span class="text-xs font-bold text-subText uppercase tracking-wider">Приглашено</span>
-                    <span id="ref-count" class="text-sm font-black text-white">0</span>
+
+                <!-- Размытый контент -->
+                <div class="sensitive-blur space-y-3 pointer-events-none select-none">
+                    <div class="bg-inputBg rounded-xl p-3 flex justify-between items-center">
+                        <span class="text-xs font-bold text-subText uppercase tracking-wider">Приглашено</span>
+                        <span id="ref-count" class="text-sm font-black text-white">0</span>
+                    </div>
+                    <div class="relative flex items-center mt-2">
+                        <input type="text" id="ref-link" readonly value="https://t.me/JuiceGriefTG?start=123456789"
+                               class="w-full bg-inputBg border border-neutral-700/60 rounded-xl pl-4 pr-12 py-3 text-xs text-neutral-400 font-mono truncate focus:outline-none">
+                        <button onclick="copyRefLink()" class="absolute right-2 text-neutral-400 hover:text-white p-2" tabindex="-1">
+                            <i class="fa-regular fa-copy text-base"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="relative flex items-center mt-2">
-                    <input type="text" id="ref-link" readonly value="https://t.me/JuiceGriefTG?start=123456789"
-                           class="w-full bg-inputBg border border-neutral-700/60 rounded-xl pl-4 pr-12 py-3 text-xs text-neutral-400 font-mono truncate focus:outline-none">
-                    <button onclick="copyRefLink()" class="absolute right-2 text-neutral-400 hover:text-white p-2">
-                        <i class="fa-regular fa-copy text-base"></i>
-                    </button>
+
+                <!-- Оверлей "Скоро" -->
+                <div class="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-[#141519]/40 backdrop-blur-[1px] rounded-2xl pointer-events-none">
+                    <div class="flex items-center gap-2 px-4 py-2 rounded-full bg-black/60 border border-orange-500/40">
+                        <i class="fa-solid fa-lock text-accentOrange text-sm"></i>
+                        <span class="text-xs font-black heading-font uppercase tracking-wider text-accentOrange">Скоро будет доступно</span>
+                    </div>
+                    <p class="text-[10px] text-subText font-medium">Реферальная система уже в разработке</p>
                 </div>
             </div>
 
