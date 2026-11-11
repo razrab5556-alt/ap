@@ -6,6 +6,7 @@
     <title>Minecraft Bonus Bot Mini App</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Inter:wght@400;500;600&family=VT323&display=swap" rel="stylesheet">
 
@@ -14,13 +15,9 @@
             theme: {
                 extend: {
                     colors: {
-                        darkBg: '#0e0f12',
-                        cardBg: '#18191e',
-                        cardBorder: '#262830',
+                        darkBg: '#09090b',
                         accentOrange: '#ff8800',
-                        accentOrangeHover: '#e67a00',
-                        inputBg: '#21232b',
-                        subText: '#9ca3af'
+                        subText: '#a1a1aa'
                     },
                     fontFamily: {
                         heading: ['Montserrat', 'sans-serif'],
@@ -34,79 +31,165 @@
 
     <style>
         body {
-            background-color: #0e0f12;
+            background-color: #09090b;
             color: #ffffff;
             font-family: 'Inter', sans-serif;
             user-select: none;
             -webkit-user-select: none;
-            overflow-x: hidden;
+            overflow-x: clip;
             touch-action: manipulation;
         }
+        html { overflow-x: clip; }
         .heading-font { font-family: 'Montserrat', sans-serif; }
         .pixel-font { font-family: 'VT323', monospace; }
 
-        .ambient-glow {
-            position: absolute; width: 250px; height: 250px; border-radius: 50%;
-            background: radial-gradient(circle, rgba(255, 136, 0, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
-            pointer-events: none; z-index: 0;
-        }
-        .card-gradient {
-            background: linear-gradient(145deg, #1d1e24 0%, #141519 100%);
-            border: 1px solid #2a2c36;
-            box-shadow: 0 12px 30px rgba(0, 0, 0, .18);
-            transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
-        }
-        .card-gradient:hover {
-            transform: translateY(-2px);
-            border-color: rgba(255, 149, 0, .42);
-            box-shadow: 0 16px 34px rgba(0, 0, 0, .28);
-        }
-        button, input { -webkit-tap-highlight-color: transparent; }
-        button:focus-visible, input:focus-visible {
-            outline: 2px solid rgba(255, 149, 0, .8); outline-offset: 3px;
-        }
-        .profile-label { color: #9ca3af; font-size: 10px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
-        .profile-value { color: #fff; font-size: 13px; font-weight: 700; overflow-wrap: anywhere; }
-        .sensitive-blur { filter: blur(6px); user-select: none; transition: filter .2s ease; }
-        .sensitive-blur.revealed { filter: none; user-select: text; }
+        .sensitive-blur { filter: blur(5px); transition: filter 0.25s ease; }
+        .sensitive-blur.revealed { filter: blur(0); }
 
-        .orange-btn {
-            background: linear-gradient(90deg, #ff9500 0%, #ff7700 100%);
-            box-shadow: 0 4px 15px rgba(255, 136, 0, 0.3);
+        .bg-ambient {
+            position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+            background-color: #09090b;
+        }
+        .glow-top {
+            position: absolute; top: -10%; left: 50%; transform: translateX(-50%);
+            width: 150vw; height: 60vh;
+            background: radial-gradient(ellipse at center, rgba(255, 119, 0, 0.4) 0%, rgba(255, 119, 0, 0.1) 40%, transparent 70%);
+            filter: blur(50px);
+        }
+        .glow-bottom {
+            position: absolute; bottom: -10%; right: -20%;
+            width: 100vw; height: 50vh;
+            background: radial-gradient(circle at center, rgba(255, 85, 0, 0.25) 0%, transparent 60%);
+            filter: blur(60px);
+        }
+        .blob {
+            position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.4;
+            animation: floatBlob 15s infinite alternate ease-in-out;
+        }
+        .blob-1 { top: 20%; left: -10%; width: 50vw; height: 50vw; background: #ff5500; }
+        .blob-2 { bottom: 30%; right: -10%; width: 60vw; height: 60vw; background: #ffaa00; animation-delay: -5s; opacity: 0.2; }
+
+        @keyframes floatBlob {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(40px, -40px) scale(1.2); }
+        }
+
+        #particles-canvas {
+            position: fixed; inset: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 1; opacity: .4;
+        }
+
+        .glass-card {
+            background: rgba(25, 25, 30, 0.5);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            border-left: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+            transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease, background .22s ease;
+        }
+        .glass-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 149, 0, 0.4);
+            background: rgba(35, 35, 40, 0.6);
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
+        }
+
+        .glass-input {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
             transition: all 0.2s ease;
         }
-        .orange-btn:active { transform: scale(0.98); box-shadow: 0 2px 8px rgba(255, 136, 0, 0.2); }
 
-        .pixel-mc-badge {
-            display: inline-flex; align-items: center;
-            background: #2a1608; border: 3px solid #ffcc00;
-            outline: 2px solid #000; box-shadow: inset 0 0 0 2px #573307;
-            padding: 2px 6px; image-rendering: pixelated;
+        .glass-sub-card {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.2s ease;
+            cursor: pointer;
         }
-        .pixel-icon-box {
-            width: 32px; height: 32px; background: #3d240d;
-            border: 2px solid #ffcc00; display: flex; align-items: center; justify-content: center;
-            margin-right: 4px;
+        .glass-sub-card:hover {
+            background: rgba(255, 136, 0, 0.15);
+            border-color: rgba(255, 136, 0, 0.4);
         }
-        .pixel-title-box {
-            background: #2e1a0a; border: 2px solid #ffcc00;
-            padding: 0px 10px; color: #ffffff; font-size: 22px;
-            letter-spacing: 2px; text-shadow: 2px 2px #000000;
+        .glass-sub-card:active { transform: scale(0.97); }
+
+        .glass-btn {
+            position: relative; overflow: hidden;
+            background: linear-gradient(135deg, rgba(255, 149, 0, 0.9) 0%, rgba(255, 119, 0, 0.8) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-bottom: 2px solid rgba(0, 0, 0, 0.2);
+            box-shadow:
+                inset 0 1px 1px rgba(255,255,255,0.4),
+                0 4px 15px rgba(255, 136, 0, 0.3);
+            transition: all 0.2s ease;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
         }
-        .tg-avatar-frame { position: relative; box-shadow: 0 0 25px rgba(255, 136, 0, 0.5); }
+        .glass-btn::after {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,.5) 50%, transparent 70%);
+            transform: translateX(-120%);
+            transition: transform .6s ease;
+            pointer-events: none;
+        }
+        .glass-btn:hover::after { transform: translateX(120%); }
+        .glass-btn:active {
+            transform: scale(0.97);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), 0 2px 8px rgba(255, 136, 0, 0.2);
+        }
+        .glass-btn:disabled { opacity: .5; cursor: not-allowed; }
+        .glass-btn:disabled::after { display: none; }
+
+        .tg-avatar-frame { position: relative; box-shadow: 0 0 25px rgba(255, 136, 0, 0.4); border: 2px solid rgba(255,255,255,0.1); }
         .tg-badge-icon {
             position: absolute; bottom: -2px; right: -2px;
             background: #0088cc; color: #fff; border-radius: 50%;
             width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
-            font-size: 11px; border: 2px solid #0e0f12;
+            font-size: 11px; border: 2px solid #09090b;
         }
         ::-webkit-scrollbar { width: 0px; background: transparent; }
+
+        .pulse-dot {
+            position: absolute; top: 12px; right: 12px;
+            width: 10px; height: 10px; border-radius: 50%;
+            background: #22c55e; box-shadow: 0 0 0 0 rgba(34,197,94,.7);
+            animation: pulseDot 1.8s infinite;
+            z-index: 20;
+        }
+        @keyframes pulseDot {
+            0% { box-shadow: 0 0 0 0 rgba(34,197,94,.7); }
+            70% { box-shadow: 0 0 0 12px rgba(34,197,94,0); }
+            100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+        }
+
+        .modal-fade { transition: opacity .25s ease; }
+        .modal-fade.hidden { opacity: 0; pointer-events: none; }
+
+        .bottom-nav-glass {
+            background: rgba(15, 15, 18, 0.5);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border-top: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.6);
+        }
+
+        @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+            .glass-card { background: rgba(25, 25, 30, 0.92) !important; }
+            .bottom-nav-glass { background: rgba(15, 15, 18, 0.92) !important; }
+        }
     </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between pb-24 relative selection:bg-orange-500 selection:text-white">
+<body class="min-h-screen flex flex-col justify-between pb-28 relative selection:bg-orange-500 selection:text-white overflow-x-clip">
 
-    <div class="ambient-glow top-0 left-1/2 -translate-x-1/2"></div>
-    <div class="ambient-glow bottom-20 right-0"></div>
+    <div class="bg-ambient">
+        <div class="glow-top"></div>
+        <div class="glow-bottom"></div>
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <canvas id="particles-canvas"></canvas>
 
     <main class="w-full max-w-md mx-auto px-4 pt-6 z-10 flex-grow">
 
@@ -114,49 +197,50 @@
         <div id="tab-home" class="space-y-6">
             <div class="flex flex-col items-center justify-center pt-4 pb-2 text-center">
                 <div class="relative mb-3">
-                    <div id="avatar-container" class="w-20 h-20 rounded-full bg-gradient-to-tr from-orange-500 to-amber-400 flex items-center justify-center text-white text-3xl font-bold tg-avatar-frame border-2 border-orange-500 overflow-hidden relative">
+                    <div id="avatar-container" class="w-20 h-20 rounded-full bg-gradient-to-tr from-orange-600 to-amber-500 flex items-center justify-center text-white text-3xl font-bold tg-avatar-frame overflow-hidden relative backdrop-blur-md">
                         <img id="user-photo" class="w-full h-full object-cover hidden" alt="Avatar" onerror="this.classList.add('hidden'); document.getElementById('avatar-initial').classList.remove('hidden');">
                         <span id="avatar-initial">T</span>
                         <div class="tg-badge-icon"><i class="fa-brands fa-telegram"></i></div>
                     </div>
                 </div>
-                <h1 class="text-2xl font-black heading-font tracking-wide uppercase flex items-center justify-center gap-1.5">
+                <h1 class="text-2xl font-black heading-font tracking-wide uppercase flex items-center justify-center gap-1.5 drop-shadow-lg">
                     Приветствую, <span id="user-name" class="text-white">Игрок</span>!
                 </h1>
                 <p class="text-subText text-xs mt-1">Добро пожаловать на JuiceGrief!</p>
             </div>
 
-            <div class="w-full flex items-center justify-center my-2">
-                <div class="h-[1px] bg-neutral-800 w-1/3"></div>
-                <div class="w-1.5 h-1.5 rounded-full bg-neutral-700 mx-2"></div>
-                <div class="h-[1px] bg-neutral-800 w-1/3"></div>
+            <div class="w-full flex items-center justify-center my-2 opacity-30">
+                <div class="h-[1px] bg-white w-1/3"></div>
+                <div class="w-1.5 h-1.5 rounded-full bg-orange-500 mx-2 shadow-[0_0_10px_rgba(255,136,0,1)]"></div>
+                <div class="h-[1px] bg-white w-1/3"></div>
             </div>
 
             <div class="space-y-4">
                 <!-- DAILY BONUS CARD -->
-                <div onclick="openTasksModal('daily')" class="card-gradient rounded-2xl p-5 relative overflow-hidden cursor-pointer group">
+                <div onclick="openTasksModal('daily')" class="glass-card rounded-3xl p-5 relative overflow-hidden cursor-pointer group">
+                    <div id="daily-pulse" class="pulse-dot hidden"></div>
                     <div class="w-2/3 z-10 relative">
-                        <h2 class="text-lg font-black heading-font text-white uppercase tracking-wide flex items-center gap-2">
-                            <i class="fa-solid fa-calendar-days text-accentOrange"></i>
+                        <h2 class="text-lg font-black heading-font text-white uppercase tracking-wide flex items-center gap-2 drop-shadow-md">
+                            <i class="fa-solid fa-calendar-days text-accentOrange drop-shadow-[0_0_8px_rgba(255,136,0,0.8)]"></i>
                             Ежедневный бонус!
                         </h2>
                         <p class="text-subText text-xs mt-1 leading-relaxed">
                             Нажми чтобы получить свой ежедневный бонус!
                         </p>
-                        <div id="timer-daily" class="text-xs font-mono text-orange-400 font-bold mt-2 hidden">
-                            <i class="fa-solid fa-clock mr-1"></i> Доступно через: <span class="timer-value">00:00:00</span>
+                        <div id="timer-daily" class="text-xs font-mono text-orange-400 font-bold mt-3 hidden flex items-center">
+                            <i class="fa-solid fa-clock mr-1.5"></i> Доступно через: <span class="timer-value ml-1">00:00:00</span>
                         </div>
                     </div>
-                    <div class="absolute -right-2 -bottom-2 w-28 h-28 opacity-40 group-hover:opacity-70 transition-opacity flex items-center justify-center pointer-events-none">
-                        <i class="fa-solid fa-cake-candles text-7xl text-orange-400/30 transform -rotate-12"></i>
+                    <div class="absolute -right-2 -bottom-2 w-28 h-28 opacity-20 group-hover:opacity-40 transition-opacity flex items-center justify-center pointer-events-none drop-shadow-2xl">
+                        <i class="fa-solid fa-cake-candles text-7xl text-orange-400 transform -rotate-12"></i>
                     </div>
                 </div>
 
                 <!-- PEGAS DONATE CARD -->
-                <div onclick="openTasksModal('pegas')" class="card-gradient rounded-2xl p-5 relative overflow-hidden cursor-pointer group">
+                <div onclick="openTasksModal('pegas')" class="glass-card rounded-3xl p-5 relative overflow-hidden cursor-pointer group">
                     <div class="w-1/2 z-10 relative">
-                        <h2 class="text-lg font-black heading-font text-white uppercase tracking-wide flex items-center gap-2">
-                            <i class="fa-solid fa-crown text-amber-400"></i>
+                        <h2 class="text-lg font-black heading-font text-white uppercase tracking-wide flex items-center gap-2 drop-shadow-md">
+                            <i class="fa-solid fa-crown text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.8)]"></i>
                             ДОНАТ PEGAS
                         </h2>
                         <p class="text-subText text-xs mt-1 leading-relaxed">
@@ -167,85 +251,91 @@
                         </div>
                     </div>
 
-                    <div class="absolute right-3 top-1/2 -translate-y-1/2 z-10 scale-90 sm:scale-100 pointer-events-none">
-                        <div class="pixel-mc-badge">
-                            <div class="pixel-icon-box">
-                                <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M2 10H4V12H2V10ZM4 8H6V10H4V8ZM6 6H8V8H6V6ZM8 4H10V6H8V4ZM10 2H14V4H10V2ZM12 4H14V8H12V4ZM10 8H12V10H10V8ZM8 10H10V12H8V10ZM6 12H8V14H6V12ZM4 12H6V14H4V12Z" fill="#FFD700"/>
-                                    <path d="M4 10H6V12H4V10ZM6 8H8V10H6V8ZM8 6H10V8H8V6ZM10 4H12V6H10V4Z" fill="#FFF8DC"/>
-                                </svg>
-                            </div>
-                            <div class="pixel-title-box pixel-font">PEGAS</div>
-                        </div>
+                    <div class="absolute right-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
+                        <img src="data:image/png;base64,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" alt="PEGAS" class="w-auto h-[39px] object-contain" style="image-rendering: pixelated; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5));">
                     </div>
                 </div>
+
+                <!-- ===== ПЛАШКА: НАБОР НА YOUTUBE / TIKTOK ===== -->
+                <div class="glass-card rounded-3xl p-5 space-y-3 relative overflow-hidden">
+                    <div class="flex items-center gap-2 text-accentOrange">
+                        <i class="fa-solid fa-bullhorn text-lg drop-shadow-[0_0_8px_rgba(255,136,0,0.8)]"></i>
+                        <h2 class="text-base font-black heading-font uppercase text-white tracking-wider drop-shadow-md">Открыт набор</h2>
+                        <img src="data:image/png;base64,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"
+                             alt="Набор контент-мейкеров"
+                             class="h-[37px] w-auto object-contain ml-1 shrink-0 drop-shadow-md">
+                    </div>
+                    <p class="text-subText text-xs leading-relaxed">
+                        Ищем контент-мейкеров на <span class="text-white font-bold">YouTube</span> и <span class="text-white font-bold">TikTok</span> по JuiceGrief. Если хочешь снимать видео - пиши нам в Discord-сервер.
+                    </p>
+                    <button onclick="openDiscordRecruit()" class="w-full glass-btn py-3.5 rounded-2xl font-black heading-font text-white uppercase text-sm tracking-wider flex items-center justify-center gap-2">
+                        <i class="fa-brands fa-discord text-base"></i>
+                        Перейти в Discord
+                    </button>
+                </div>
+                <!-- ===== /ПЛАШКА ===== -->
             </div>
         </div>
 
         <!-- TAB 2: PROFILE -->
         <div id="tab-profile" class="space-y-5 hidden">
-            <div class="card-gradient rounded-2xl p-5 space-y-4">
+            <div class="glass-card rounded-3xl p-5 space-y-4">
                 <div class="flex items-center gap-2 text-accentOrange">
-                    <i class="fa-solid fa-user-shield text-lg"></i>
-                    <h2 class="text-base font-black heading-font uppercase text-white tracking-wider">Ваш аккаунт</h2>
+                    <i class="fa-solid fa-user-shield text-lg drop-shadow-[0_0_8px_rgba(255,136,0,0.8)]"></i>
+                    <h2 class="text-base font-black heading-font uppercase text-white tracking-wider drop-shadow-md">Ваш аккаунт</h2>
                 </div>
 
-                <div class="bg-inputBg rounded-xl p-3 flex justify-between items-center gap-3">
-                    <span class="profile-label">Telegram ID</span>
+                <div class="glass-input rounded-2xl p-3 flex justify-between items-center gap-3">
+                    <span class="text-[10px] font-extrabold text-subText uppercase tracking-widest">Telegram ID</span>
                     <div class="flex items-center gap-3">
-                        <span id="tg-id-display" class="profile-value font-mono text-orange-400 sensitive-blur">••••••••</span>
-                        <button type="button" id="tg-id-toggle" onclick="toggleTelegramId()" class="text-xs text-orange-400 font-bold">Показать</button>
+                        <span id="tg-id-display" class="text-[13px] font-bold font-mono text-orange-400 sensitive-blur">••••••••</span>
+                        <button type="button" id="tg-id-toggle" onclick="toggleTelegramId()" class="text-xs text-orange-400 font-bold hover:text-white transition-colors">Показать</button>
                     </div>
                 </div>
 
-                <div class="bg-inputBg rounded-xl p-3 flex justify-between items-center">
+                <div class="glass-input rounded-2xl p-3 flex justify-between items-center">
                     <span class="text-xs font-bold text-subText uppercase tracking-wider">Игровой ник</span>
                     <span id="nick-status" class="text-xs font-black uppercase text-red-500 tracking-wider">Не привязан</span>
                 </div>
 
-                <div class="text-center px-2">
-                    <p class="text-[11px] text-subText leading-tight">
-                        <i class="fa-solid fa-triangle-exclamation text-accentOrange mr-1"></i>
-                        <span class="font-bold text-accentOrange">ОБРАТИТЕ ВНИМАНИЕ</span><br>
-                        Никнейм привязывается к вашему Telegram ID навсегда и изменить его нельзя.
+                <div class="text-center px-1 py-2 opacity-80">
+                    <p class="text-[11px] leading-tight flex flex-col items-center justify-center gap-1">
+                        <span class="font-bold text-orange-500 uppercase tracking-wide flex items-center gap-1.5 drop-shadow-sm">
+                            <i class="fa-solid fa-triangle-exclamation"></i> ОБРАТИТЕ ВНИМАНИЕ
+                        </span>
+                        <span class="text-subText font-medium">Никнейм привязывается к вашему Telegram ID навсегда и изменить его нельзя.</span>
                     </p>
                 </div>
 
                 <div id="nick-input-container" class="space-y-3">
                     <input type="text" id="mc-nickname" placeholder="Введи свой ник в игре"
-                           class="w-full bg-inputBg border border-neutral-700/60 rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-accentOrange">
-                    <button onclick="linkAccount()" class="w-full orange-btn py-3.5 rounded-xl font-black heading-font text-white uppercase text-sm tracking-wider">
+                           class="w-full glass-input rounded-2xl px-4 py-3 text-sm text-white placeholder-neutral-500 focus:outline-none transition-colors">
+                    <button onclick="askLinkAccount()" class="w-full glass-btn py-3.5 rounded-2xl font-black heading-font text-white uppercase text-sm tracking-wider">
                         Привязать аккаунт
                     </button>
                 </div>
             </div>
 
             <!-- REFERRALS -->
-            <!-- REFERRALS -->
-            <div class="card-gradient rounded-2xl p-5 space-y-3 relative overflow-hidden">
+            <div class="glass-card rounded-3xl p-5 space-y-3 relative overflow-hidden">
                 <div class="flex items-center gap-2 text-accentOrange">
-                    <i class="fa-solid fa-users text-lg"></i>
-                    <h2 class="text-base font-black heading-font uppercase text-white tracking-wider">Рефералы</h2>
+                    <i class="fa-solid fa-users text-lg drop-shadow-[0_0_8px_rgba(255,136,0,0.8)]"></i>
+                    <h2 class="text-base font-black heading-font uppercase text-white tracking-wider drop-shadow-md">Рефералы</h2>
                 </div>
 
-                <!-- Размытый контент -->
                 <div class="sensitive-blur space-y-3 pointer-events-none select-none">
-                    <div class="bg-inputBg rounded-xl p-3 flex justify-between items-center">
+                    <div class="glass-input rounded-2xl p-3 flex justify-between items-center">
                         <span class="text-xs font-bold text-subText uppercase tracking-wider">Приглашено</span>
                         <span id="ref-count" class="text-sm font-black text-white">0</span>
                     </div>
                     <div class="relative flex items-center mt-2">
                         <input type="text" id="ref-link" readonly value="https://t.me/JuiceGriefTG?start=123456789"
-                               class="w-full bg-inputBg border border-neutral-700/60 rounded-xl pl-4 pr-12 py-3 text-xs text-neutral-400 font-mono truncate focus:outline-none">
-                        <button onclick="copyRefLink()" class="absolute right-2 text-neutral-400 hover:text-white p-2" tabindex="-1">
-                            <i class="fa-regular fa-copy text-base"></i>
-                        </button>
+                               class="w-full glass-input rounded-2xl pl-4 pr-12 py-3 text-xs text-neutral-400 font-mono truncate focus:outline-none">
                     </div>
                 </div>
 
-                <!-- Оверлей "Скоро" -->
-                <div class="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-[#141519]/40 backdrop-blur-[1px] rounded-2xl pointer-events-none">
-                    <div class="flex items-center gap-2 px-4 py-2 rounded-full bg-black/60 border border-orange-500/40">
+                <div class="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/40 backdrop-blur-sm rounded-3xl pointer-events-none">
+                    <div class="flex items-center gap-2 px-4 py-2 rounded-full bg-black/60 border border-orange-500/30 shadow-[0_0_15px_rgba(255,136,0,0.2)]">
                         <i class="fa-solid fa-lock text-accentOrange text-sm"></i>
                         <span class="text-xs font-black heading-font uppercase tracking-wider text-accentOrange">Скоро будет доступно</span>
                     </div>
@@ -254,12 +344,13 @@
             </div>
 
             <!-- SUPPORT -->
-            <div class="card-gradient rounded-2xl p-5 space-y-3">
+            <div class="glass-card rounded-3xl p-5 space-y-3">
                 <div class="flex items-center gap-2 text-accentOrange">
-                    <i class="fa-solid fa-headset text-lg"></i>
-                    <h2 class="text-base font-black heading-font uppercase text-white tracking-wider">Поддержка</h2>
+                    <i class="fa-solid fa-headset text-lg drop-shadow-[0_0_8px_rgba(255,136,0,0.8)]"></i>
+                    <h2 class="text-base font-black heading-font uppercase text-white tracking-wider drop-shadow-md">Поддержка</h2>
                 </div>
-                <button onclick="openSupport()" class="w-full orange-btn py-3.5 rounded-xl font-black heading-font text-white uppercase text-sm tracking-wider">
+                <p class="text-subText text-xs leading-relaxed">Нашли ошибку или есть вопросы? Напишите нам!</p>
+                <button onclick="openSupport()" class="w-full glass-btn py-3.5 rounded-2xl font-black heading-font text-white uppercase text-sm tracking-wider">
                     Связаться с поддержкой
                 </button>
             </div>
@@ -268,67 +359,97 @@
     </main>
 
     <!-- NAVIGATION BAR -->
-    <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-[#121318]/95 backdrop-blur-xl border-t border-neutral-800/80 px-6 py-3.5 z-30 shadow-[0_-10px_35px_rgba(0,0,0,.25)]">
+    <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bottom-nav-glass rounded-t-[2rem] px-8 py-4 z-30">
         <div class="flex justify-around items-center">
-            <button id="nav-home" onclick="switchTab('home')" class="flex flex-col items-center gap-1 text-accentOrange transition-colors">
-                <i class="fa-solid fa-house text-xl"></i>
+            <button id="nav-home" onclick="switchTab('home')" class="flex flex-col items-center gap-1.5 text-accentOrange transition-all duration-300">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center bg-orange-500/10 border border-orange-500/20 shadow-[0_0_15px_rgba(255,136,0,0.2)]">
+                    <i class="fa-solid fa-house text-lg drop-shadow-[0_0_5px_rgba(255,136,0,0.8)]"></i>
+                </div>
                 <span class="text-[10px] font-bold uppercase tracking-wider">Главная</span>
             </button>
-            <button id="nav-profile" onclick="switchTab('profile')" class="flex flex-col items-center gap-1 text-subText hover:text-white transition-colors">
-                <i class="fa-solid fa-user text-xl"></i>
+            <button id="nav-profile" onclick="switchTab('profile')" class="flex flex-col items-center gap-1.5 text-subText hover:text-white transition-all duration-300">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center">
+                    <i class="fa-solid fa-user text-lg"></i>
+                </div>
                 <span class="text-[10px] font-bold uppercase tracking-wider">Профиль</span>
             </button>
         </div>
     </nav>
 
     <!-- TASKS MODAL -->
-    <div id="tasks-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden transition-opacity duration-300">
-        <div class="bg-[#14151a] border border-neutral-800 w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 space-y-5 relative">
-
-            <div class="w-12 h-1 bg-neutral-700 rounded-full mx-auto -mt-2 mb-2"></div>
+    <div id="tasks-modal" class="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden modal-fade">
+        <div class="glass-card w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2.5rem] p-6 space-y-5 relative border-b-0 sm:border-b border-white/10">
+            <div class="w-12 h-1.5 bg-white/20 rounded-full mx-auto -mt-2 mb-2"></div>
 
             <div class="space-y-1">
                 <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-full bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-accentOrange">
+                    <div class="w-10 h-10 rounded-full bg-orange-500/20 border border-orange-500/30 flex items-center justify-center text-accentOrange shadow-[0_0_15px_rgba(255,136,0,0.3)]">
                         <i class="fa-solid fa-circle-check text-lg"></i>
                     </div>
-                    <h3 id="modal-title" class="text-base font-black heading-font text-white leading-snug">
+                    <h3 id="modal-title" class="text-base font-black heading-font text-white leading-snug drop-shadow-md">
                         Выполни задание для получения награды
                     </h3>
                 </div>
-                <p class="text-xs text-subText pl-12">Подпишитесь на наш официальный канал для продолжения</p>
+                <p class="text-xs text-subText pl-[3.25rem]">Подпишитесь на наш официальный канал для продолжения</p>
             </div>
 
             <div class="space-y-3">
-                <div class="bg-inputBg border border-neutral-800 rounded-xl p-4 flex justify-between items-center">
+                <div onclick="openChannelLink()" class="glass-sub-card rounded-2xl p-4 flex justify-between items-center">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-cyan-500 flex items-center justify-center text-white">
+                        <div class="w-10 h-10 rounded-full bg-cyan-500/90 flex items-center justify-center text-white shadow-lg">
                             <i class="fa-brands fa-telegram text-xl"></i>
                         </div>
                         <div>
                             <p class="text-xs font-bold text-white">Подпишись на канал</p>
-                            <a href="https://t.me/JuiceGriefTG" target="_blank" rel="noopener noreferrer" onclick="openChannelLink(); return false;" class="text-xs text-cyan-400 font-mono hover:underline">@JuiceGriefTG</a>
+                            <p class="text-xs text-cyan-400 font-mono">@JuiceGriefTG</p>
                         </div>
                     </div>
-                    <div id="sub-status-icon" class="w-7 h-7 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-500 font-bold text-xs">
-                        <i class="fa-solid fa-xmark"></i>
+                    <div class="w-8 h-8 rounded-full bg-orange-500/20 border border-orange-500/30 flex items-center justify-center text-orange-500 font-bold text-xs">
+                        <i class="fa-solid fa-angle-right text-lg"></i>
                     </div>
                 </div>
             </div>
 
-            <button id="modal-action-btn" onclick="handleModalAction()" class="w-full orange-btn py-4 rounded-xl font-black heading-font text-white uppercase text-sm tracking-wider">
+            <button id="modal-action-btn" onclick="handleModalAction()" class="w-full glass-btn py-4 rounded-2xl font-black heading-font text-white uppercase text-sm tracking-wider">
                 Получить награду
             </button>
 
-            <button onclick="closeTasksModal()" class="w-full text-center text-xs text-subText hover:text-white py-1">
+            <button onclick="closeTasksModal()" class="w-full text-center text-xs text-subText hover:text-white py-1 transition-colors">
                 Закрыть
             </button>
         </div>
     </div>
 
+    <!-- CONFIRM NICK MODAL -->
+    <div id="confirm-nick-modal" class="fixed inset-0 bg-black/70 backdrop-blur-md z-[60] flex items-center justify-center p-4 hidden modal-fade">
+        <div class="glass-card w-full max-w-sm rounded-[2rem] p-6 space-y-5 text-center shadow-2xl">
+            <div class="w-16 h-16 mx-auto rounded-full bg-orange-500/20 border border-orange-500/30 flex items-center justify-center text-accentOrange mb-2 shadow-[0_0_20px_rgba(255,136,0,0.3)]">
+                <i class="fa-solid fa-triangle-exclamation text-3xl drop-shadow-md"></i>
+            </div>
+
+            <div class="text-center px-1">
+                <p class="text-[12px] leading-relaxed flex flex-col items-center justify-center gap-2">
+                    <span class="font-bold text-orange-500 uppercase tracking-wide flex items-center gap-1.5 text-sm drop-shadow-sm">
+                        <i class="fa-solid fa-triangle-exclamation"></i> ОБРАТИТЕ ВНИМАНИЕ
+                    </span>
+                    <span class="text-subText font-medium">Никнейм <span id="confirm-nick-value" class="text-white font-mono font-bold bg-white/10 px-2 py-0.5 rounded"></span> привязывается к вашему Telegram ID навсегда и изменить его нельзя.</span>
+                </p>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button onclick="closeConfirmNick()" class="flex-1 py-3.5 rounded-2xl glass-input font-bold text-sm text-subText hover:text-white transition-colors">
+                    Отмена
+                </button>
+                <button onclick="confirmLinkAccount()" class="flex-1 glass-btn py-3.5 rounded-2xl font-black heading-font text-white uppercase text-sm tracking-wider">
+                    Привязать
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- TOAST -->
-    <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 max-w-xs w-full bg-neutral-900 border border-neutral-700 text-white px-4 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-3 transform -translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
-        <i id="toast-icon" class="fa-solid fa-circle-info text-accentOrange text-lg"></i>
+    <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 max-w-[90%] w-max min-w-[280px] glass-card border-white/20 text-white px-4 py-3 rounded-2xl shadow-2xl z-[70] flex items-center gap-3 transform -translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+        <i id="toast-icon" class="fa-solid fa-circle-info text-accentOrange text-lg shrink-0"></i>
         <span id="toast-msg" class="text-xs font-medium">Уведомление</span>
     </div>
 
@@ -336,35 +457,50 @@
         const tg = window.Telegram?.WebApp;
         if (tg) { tg.ready(); tg.expand(); }
 
-        // ВПИШИ СВОЙ HTTPS-АДРЕС API (без слэша в конце), например https://api.example.com
         const API_URL = 'https://bonus.juicegrief.fun';
         const BOT_USERNAME = 'JuiceGriefTG';
         const CHANNEL_URL = 'https://t.me/JuiceGriefTG';
         const DAY = 86400000;
 
-        // Начальное состояние из URL (если открыто кнопкой бота), затем обновляется с сервера
-        const params = new URLSearchParams(location.search);
         const telegramUser = tg?.initDataUnsafe?.user || null;
+        const initData = tg?.initData || '';
+
         const state = {
             tgId: telegramUser?.id ? String(telegramUser.id) : '',
-            userName: telegramUser ? ([telegramUser.first_name, telegramUser.last_name].filter(Boolean).join(' ').trim() || 'Игрок') : 'Откройте через Telegram',
+            userName: telegramUser
+                ? ([telegramUser.first_name, telegramUser.last_name].filter(Boolean).join(' ').trim() || 'Игрок')
+                : 'Откройте через Telegram',
             photoUrl: telegramUser?.photo_url || null,
-            nickname: (params.get('nick') || '').trim(),
-            dailyLast: parseInt(params.get('d') || '0', 10) || 0,
-            pegasClaimed: params.get('p') === '1',
-            refCount: parseInt(params.get('r') || '0', 10) || 0,
+            nickname: '',
+            dailyLast: 0,
+            pegasClaimed: false,
+            refCount: 0,
             currentRewardType: 'daily'
         };
 
         let dailyInterval = null;
         let busy = false;
 
+        function haptic(type = 'light') {
+            try {
+                if (!tg?.HapticFeedback) return;
+                if (type === 'success' || type === 'error' || type === 'warning') {
+                    tg.HapticFeedback.notificationOccurred(type);
+                } else {
+                    tg.HapticFeedback.impactOccurred(type);
+                }
+            } catch {}
+        }
+
         async function api(path, extra = {}) {
+            if (!initData) {
+                return { ok: false, message: 'Откройте приложение через Telegram.' };
+            }
             try {
                 const r = await fetch(API_URL + '/api/' + path, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ initData: tg?.initData || '', ...extra })
+                    body: JSON.stringify({ initData, ...extra })
                 });
                 return await r.json();
             } catch (e) {
@@ -399,31 +535,82 @@
                 initial.innerText = state.userName.charAt(0).toUpperCase() || 'J';
             }
 
-            if (state.nickname) renderLinkedState();
-            document.getElementById('ref-count').innerText = state.refCount;
             if (state.tgId) {
                 document.getElementById('ref-link').value = `https://t.me/${BOT_USERNAME}?start=${state.tgId}`;
             }
             checkCooldowns();
+            initParticles();
+
+            if (!initData) {
+                showToast('Откройте приложение через Telegram.', 'error');
+                return;
+            }
 
             // Проверяем связь с сервером при запуске
             api('state').then(r => {
                 if (r && r.state) {
                     applyState(r.state);
                 } else {
-                    // Если сервер не ответил или вернул ошибку
-                    showToast(r.message || 'Нет связи с сервером! Попробуйте позже.', 'error');
+                    showToast(r?.message || 'Нет связи с сервером! Попробуйте позже.', 'error');
                 }
             }).catch(() => {
                 showToast('Нет связи с сервером! Попробуйте позже.', 'error');
             });
         });
 
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') checkCooldowns();
+        });
+
+        function initParticles() {
+            const canvas = document.getElementById('particles-canvas');
+            const ctx = canvas.getContext('2d');
+            let w, h, particles = [];
+            const COUNT = 20;
+
+            function resize() {
+                w = canvas.width = window.innerWidth * devicePixelRatio;
+                h = canvas.height = window.innerHeight * devicePixelRatio;
+                canvas.style.width = window.innerWidth + 'px';
+                canvas.style.height = window.innerHeight + 'px';
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            for (let i = 0; i < COUNT; i++) {
+                particles.push({
+                    x: Math.random() * w,
+                    y: Math.random() * h,
+                    size: (Math.random() * 2 + 1.5) * devicePixelRatio,
+                    speed: (Math.random() * .35 + .15) * devicePixelRatio,
+                    drift: (Math.random() - .5) * .3,
+                    alpha: Math.random() * .5 + .15,
+                    hue: Math.random() > .5 ? 32 : 45
+                });
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, w, h);
+                particles.forEach(p => {
+                    p.y -= p.speed;
+                    p.x += p.drift;
+                    if (p.y < -10) { p.y = h + 10; p.x = Math.random() * w; }
+                    if (p.x < -10) p.x = w + 10;
+                    if (p.x > w + 10) p.x = -10;
+                    ctx.fillStyle = `hsla(${p.hue}, 100%, 60%, ${p.alpha})`;
+                    ctx.fillRect(p.x, p.y, p.size, p.size);
+                });
+                requestAnimationFrame(draw);
+            }
+            draw();
+        }
+
         function toggleTelegramId() {
             const id = document.getElementById('tg-id-display');
             const button = document.getElementById('tg-id-toggle');
             const revealed = id.classList.toggle('revealed');
             button.innerText = revealed ? 'Скрыть' : 'Показать';
+            haptic('light');
         }
 
         function switchTab(tabName) {
@@ -431,39 +618,68 @@
             const profileTab = document.getElementById('tab-profile');
             const navHome = document.getElementById('nav-home');
             const navProfile = document.getElementById('nav-profile');
+            haptic('light');
             if (tabName === 'home') {
                 homeTab.classList.remove('hidden'); profileTab.classList.add('hidden');
-                navHome.className = 'flex flex-col items-center gap-1 text-accentOrange transition-colors';
-                navProfile.className = 'flex flex-col items-center gap-1 text-subText hover:text-white transition-colors';
+                navHome.className = 'flex flex-col items-center gap-1.5 text-accentOrange transition-all duration-300';
+                navHome.querySelector('div').className = 'w-10 h-10 rounded-full flex items-center justify-center bg-orange-500/10 border border-orange-500/20 shadow-[0_0_15px_rgba(255,136,0,0.2)]';
+                navHome.querySelector('i').className = 'fa-solid fa-house text-lg drop-shadow-[0_0_5px_rgba(255,136,0,0.8)]';
+                navProfile.className = 'flex flex-col items-center gap-1.5 text-subText hover:text-white transition-all duration-300';
+                navProfile.querySelector('div').className = 'w-10 h-10 rounded-full flex items-center justify-center';
+                navProfile.querySelector('i').className = 'fa-solid fa-user text-lg';
             } else {
                 homeTab.classList.add('hidden'); profileTab.classList.remove('hidden');
-                navHome.className = 'flex flex-col items-center gap-1 text-subText hover:text-white transition-colors';
-                navProfile.className = 'flex flex-col items-center gap-1 text-accentOrange transition-colors';
+                navProfile.className = 'flex flex-col items-center gap-1.5 text-accentOrange transition-all duration-300';
+                navProfile.querySelector('div').className = 'w-10 h-10 rounded-full flex items-center justify-center bg-orange-500/10 border border-orange-500/20 shadow-[0_0_15px_rgba(255,136,0,0.2)]';
+                navProfile.querySelector('i').className = 'fa-solid fa-user text-lg drop-shadow-[0_0_5px_rgba(255,136,0,0.8)]';
+                navHome.className = 'flex flex-col items-center gap-1.5 text-subText hover:text-white transition-all duration-300';
+                navHome.querySelector('div').className = 'w-10 h-10 rounded-full flex items-center justify-center';
+                navHome.querySelector('i').className = 'fa-solid fa-house text-lg';
             }
         }
 
-        async function linkAccount() {
-            if (!state.tgId) return showToast('Ошибка: откройте приложение через Telegram.', 'error');
+        function askLinkAccount() {
+            if (!initData) return showToast('Откройте приложение через Telegram.', 'error');
             if (state.nickname) return showToast('Аккаунт уже привязан к нику "' + state.nickname + '". Изменять нельзя!', 'error');
             const nick = document.getElementById('mc-nickname').value.trim();
             if (!/^[a-zA-Z0-9_]{3,16}$/.test(nick)) {
+                haptic('error');
                 return showToast('Ник должен содержать 3–16 символов (латиница, цифры, _).', 'error');
             }
+            document.getElementById('confirm-nick-value').innerText = nick;
+            document.getElementById('confirm-nick-modal').classList.remove('hidden');
+            haptic('warning');
+        }
+
+        function closeConfirmNick() {
+            document.getElementById('confirm-nick-modal').classList.add('hidden');
+            haptic('light');
+        }
+
+        async function confirmLinkAccount() {
             if (busy) return;
+            const nick = document.getElementById('mc-nickname').value.trim();
+            closeConfirmNick();
             busy = true;
             const r = await api('link', { nickname: nick });
             busy = false;
-            applyState(r.state);
+            if (r.state) applyState(r.state);
+            if (r.ok) {
+                haptic('success');
+                confetti({ particleCount: 80, spread: 70, origin: { y: .7 } });
+            } else {
+                haptic('error');
+            }
             showToast(r.message, r.ok ? 'success' : 'error');
         }
 
         function renderLinkedState() {
             const statusEl = document.getElementById('nick-status');
             statusEl.innerText = state.nickname;
-            statusEl.className = 'text-xs font-black uppercase text-green-400 tracking-wider';
+            statusEl.className = 'text-xs font-black uppercase text-green-400 tracking-wider drop-shadow-[0_0_5px_rgba(74,222,128,0.5)]';
             document.getElementById('nick-input-container').innerHTML = `
-                <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3 text-center">
-                    <p class="text-xs text-emerald-400 font-bold"><i class="fa-solid fa-circle-check mr-1"></i> Привязан к ${escapeHtml(state.nickname)}</p>
+                <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-3 flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
+                    <p class="text-xs text-emerald-400 font-bold truncate"><i class="fa-solid fa-circle-check mr-1"></i> Привязан к ${escapeHtml(state.nickname)}</p>
                 </div>`;
         }
 
@@ -472,22 +688,22 @@
         }
 
         function openTasksModal(type) {
-            if (!state.tgId) return showToast('Ошибка: откройте приложение через Telegram.', 'error');
+            if (!initData) return showToast('Откройте приложение через Telegram.', 'error');
             if (!state.nickname) {
                 showToast('Сначала привяжите свой ник в профиле!', 'error');
                 switchTab('profile');
                 return;
             }
-            // ИСПРАВЛЕННЫЙ БЛОК: Подсчет времени в уведомлении
             if (type === 'daily' && state.dailyLast && Date.now() - state.dailyLast < DAY) {
                 const diff = DAY - (Date.now() - state.dailyLast);
                 const h = String(Math.floor(diff / 3600000)).padStart(2, '0');
                 const m = String(Math.floor((diff / 60000) % 60)).padStart(2, '0');
                 const s = String(Math.floor((diff / 1000) % 60)).padStart(2, '0');
-                
+                haptic('error');
                 return showToast(`Ежедневный бонус уже получен! <br>Подождите ${h} ч. ${m} мин. ${s} сек.`, 'error');
             }
             if (type === 'pegas' && state.pegasClaimed) {
+                haptic('error');
                 return showToast('Донат PEGAS уже был получен ранее!', 'error');
             }
 
@@ -496,38 +712,69 @@
                 type === 'pegas' ? 'Получение Доната PEGAS' : 'Получение ежедневного бонуса';
             document.getElementById('modal-action-btn').innerText = 'Получить награду';
             document.getElementById('tasks-modal').classList.remove('hidden');
+            haptic('light');
         }
 
-        function closeTasksModal() { document.getElementById('tasks-modal').classList.add('hidden'); }
+        function closeTasksModal() {
+            document.getElementById('tasks-modal').classList.add('hidden');
+            haptic('light');
+        }
 
         function openChannelLink() {
+            haptic('light');
             if (tg?.openTelegramLink) tg.openTelegramLink(CHANNEL_URL);
             else window.open(CHANNEL_URL, '_blank', 'noopener,noreferrer');
+        }
+
+        function openDiscordRecruit() {
+            haptic('light');
+            const url = 'https://discord.gg/NKqACJMPUn';
+            if (tg?.openLink) tg.openLink(url);
+            else window.open(url, '_blank', 'noopener,noreferrer');
         }
 
         async function handleModalAction() {
             if (busy) return;
             busy = true;
             const btn = document.getElementById('modal-action-btn');
+            const oldText = btn.innerText;
             btn.innerText = 'ПРОВЕРЯЕМ...';
+            btn.disabled = true;
             const r = await api('claim', { type: state.currentRewardType });
             busy = false;
-            btn.innerText = 'Получить награду';
-            applyState(r.state);
+            btn.innerText = oldText;
+            btn.disabled = false;
+            if (r.state) applyState(r.state);
             closeTasksModal();
+
+            if (r.ok) {
+                haptic('success');
+                if (state.currentRewardType === 'pegas') {
+                    confetti({ particleCount: 180, spread: 100, origin: { y: .6 }, colors: ['#FFD700','#FFF8DC','#ff9500','#ffffff'] });
+                    setTimeout(() => confetti({ particleCount: 100, angle: 60, spread: 80, origin: { x: 0 } }), 200);
+                    setTimeout(() => confetti({ particleCount: 100, angle: 120, spread: 80, origin: { x: 1 } }), 300);
+                } else {
+                    confetti({ particleCount: 90, spread: 80, origin: { y: .65 } });
+                }
+            } else {
+                haptic('error');
+            }
             showToast(r.message, r.ok ? 'success' : 'error');
         }
 
         function startDailyTimer() {
             const timerEl = document.getElementById('timer-daily');
             const valEl = timerEl.querySelector('.timer-value');
+            const pulse = document.getElementById('daily-pulse');
             timerEl.classList.remove('hidden');
+            pulse.classList.add('hidden');
             clearInterval(dailyInterval);
 
             const tick = () => {
                 const diff = DAY - (Date.now() - state.dailyLast);
                 if (diff <= 0) {
                     timerEl.classList.add('hidden');
+                    pulse.classList.remove('hidden');
                     clearInterval(dailyInterval);
                     return;
                 }
@@ -541,38 +788,48 @@
         }
 
         function checkCooldowns() {
-            if (state.dailyLast && Date.now() - state.dailyLast < DAY) startDailyTimer();
-            if (state.pegasClaimed) document.getElementById('pegas-status-label').classList.remove('hidden');
+            const timerEl = document.getElementById('timer-daily');
+            const pulse = document.getElementById('daily-pulse');
+            if (state.dailyLast && Date.now() - state.dailyLast < DAY) {
+                startDailyTimer();
+            } else {
+                timerEl.classList.add('hidden');
+                if (state.nickname) pulse.classList.remove('hidden');
+            }
+            if (state.pegasClaimed) {
+                document.getElementById('pegas-status-label').classList.remove('hidden');
+            }
         }
 
         async function copyRefLink() {
             const value = document.getElementById('ref-link').value;
             try {
                 if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(value);
+                haptic('light');
                 showToast('Реферальная ссылка скопирована!', 'success');
             } catch { showToast('Не удалось скопировать.', 'error'); }
         }
 
         function openSupport() {
+            haptic('light');
             const url = 'https://dsc.gg/juicegrief';
             if (tg?.openLink) tg.openLink(url);
             else window.open(url, '_blank', 'noopener,noreferrer');
         }
 
-        // ИСПРАВЛЕННЫЙ TOAST (теперь поддерживает HTML-теги и защищен от XSS)
         function showToast(message, type = 'info') {
             if (!message) return;
             const toast = document.getElementById('toast');
             const msgEl = document.getElementById('toast-msg');
             const iconEl = document.getElementById('toast-icon');
-            
-            // Безопасный вывод: разрешаем только тег <br>, остальное экранируем
+
             const safeMessage = String(message).replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/&lt;br&gt;/g, '<br>');
             msgEl.innerHTML = safeMessage;
 
-            if (type === 'success') iconEl.className = 'fa-solid fa-circle-check text-emerald-400 text-lg';
-            else if (type === 'error') iconEl.className = 'fa-solid fa-circle-exclamation text-red-500 text-lg';
-            else iconEl.className = 'fa-solid fa-circle-info text-accentOrange text-lg';
+            if (type === 'success') iconEl.className = 'fa-solid fa-circle-check text-emerald-400 text-lg shrink-0';
+            else if (type === 'error') iconEl.className = 'fa-solid fa-circle-exclamation text-red-500 text-lg shrink-0';
+            else iconEl.className = 'fa-solid fa-circle-info text-accentOrange text-lg shrink-0';
+
             toast.classList.remove('-translate-y-20', 'opacity-0', 'pointer-events-none');
             toast.classList.add('translate-y-0', 'opacity-100');
             clearTimeout(window.__toastTimer);
